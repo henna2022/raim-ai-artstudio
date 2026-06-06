@@ -1,11 +1,13 @@
-// 이미지 생성: Google Gemini(2.5 Flash Image, "Nano Banana")로 그림 생성
-// → Supabase Storage에 저장 → 공개 URL 반환. (Vercel 서버리스 함수)
-// 비밀 키는 Vercel 환경변수에만 저장됩니다(태블릿에 노출 안 됨). 카드 등록 불필요.
+// 이미지 생성: Pollinations.ai(FLUX)로 그림 생성 → Supabase Storage 저장 → 공개 URL 반환
+// Pollinations는 키·카드·로그인 없이 무료로 쓸 수 있어요. (Vercel 서버리스 함수)
 
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const BUCKET = process.env.SUPABASE_BUCKET || 'artworks';
+
+// 이미지 생성이 가끔 길어질 수 있어 함수 제한시간을 늘려둠 (Vercel)
+export const maxDuration = 60;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능해요.' });
@@ -27,41 +29,37 @@ export default async function handler(req, res) {
     const safePrompt =
       "A bright, cute, friendly children's book illustration, soft pastel colors, safe and wholesome, no text. " + prompt;
 
-    // (3) Gemini 이미지 생성 호출
-    const model = process.env.IMAGE_MODEL || 'gemini-2.5-flash-image';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: safePrompt }] }],
-        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-      }),
+    // (3) Pollinations(FLUX)로 이미지 생성
+    const params = new URLSearchParams({
+      width: '1024',
+      height: '1024',
+      nologo: 'true',        // 워터마크 없음
+      model: 'flux',
+      safe: 'true',          // 안전 필터 켬
+      seed: String(Math.floor(Math.random() * 100000)),
     });
-    const data = await r.json();
-    if (!r.ok) {
-      return res.status(502).json({ error: data?.error?.message || '이미지 생성에 실패했어요.' });
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${params.toString()}`;
+
+    const imgResp = await fetch(imgUrl);
+    if (!imgResp.ok) {
+      return res.status(502).json({ error: '이미지 생성에 실패했어요. 잠시 후 다시 시도해 주세요.' });
+    }
+    const mime = imgResp.headers.get('content-type') || 'image/jpeg';
+    const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+    const buffer = Buffer.from(await imgResp.arrayBuffer());
+
+    if (!buffer || buffer.length < 1000) {
+      return res.status(502).json({ error: '이미지를 제대로 받지 못했어요. 다시 시도해 주세요.' });
     }
 
-    // (4) 응답에서 이미지(base64) 추출
-    const parts = data?.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find((p) => p.inlineData && p.inlineData.data);
-    if (!imgPart) {
-      return res.status(502).json({ error: '이미지를 받지 못했어요. 다시 시도해 주세요.' });
-    }
-    const b64 = imgPart.inlineData.data;
-    const mime = imgPart.inlineData.mimeType || 'image/png';
-    const ext = mime.includes('jpeg') ? 'jpg' : mime.includes('webp') ? 'webp' : 'png';
-    const buffer = Buffer.from(b64, 'base64');
-
-    // (5) Supabase Storage에 저장
+    // (4) Supabase Storage에 저장
     const filename = `art-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, buffer, { contentType: mime });
     if (upErr) return res.status(500).json({ error: '저장에 실패했어요: ' + upErr.message });
 
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
 
-    // (6) 5시간 지난 그림 정리 (용량 절약 + QR 5시간 만료)
+    // (5) 5시간 지난 그림 정리
     await cleanupOld();
 
     return res.status(200).json({ url: pub.publicUrl });
@@ -71,10 +69,10 @@ export default async function handler(req, res) {
   }
 }
 
-// 5시간 이상 지난 그림 삭제. 새 그림이 만들어질 때마다 한 번씩 정리합니다.
+// 5시간 이상 지난 그림 삭제 (용량 절약 + QR 5시간 만료)
 async function cleanupOld() {
   try {
-    const cutoff = Date.now() - 5 * 60 * 60 * 1000; // 5시간
+    const cutoff = Date.now() - 5 * 60 * 60 * 1000;
     const { data: files } = await supabase.storage.from(BUCKET).list('', { limit: 1000 });
     const old = (files || [])
       .filter((f) => f.created_at && new Date(f.created_at).getTime() < cutoff)
