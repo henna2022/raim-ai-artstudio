@@ -40,9 +40,18 @@ export default async function handler(req, res) {
     });
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${params.toString()}`;
 
-    const imgResp = await fetch(imgUrl);
-    if (!imgResp.ok) {
-      return res.status(502).json({ error: '이미지 생성에 실패했어요. 잠시 후 다시 시도해 주세요.' });
+    // Pollinations 호출 (콜드스타트 대비 재시도 + 브라우저 헤더)
+    const fetchHeaders = { 'User-Agent': 'Mozilla/5.0 (compatible; AIArtMuseum/1.0)' };
+    let imgResp;
+    let lastStatus = 0;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      imgResp = await fetch(imgUrl, { headers: fetchHeaders });
+      if (imgResp.ok) break;
+      lastStatus = imgResp.status;
+      await new Promise((r) => setTimeout(r, 3000)); // 3초 기다렸다 재시도
+    }
+    if (!imgResp || !imgResp.ok) {
+      return res.status(502).json({ error: `이미지 서비스가 잠시 불안정해요 (상태 ${lastStatus}). 잠시 후 다시 눌러주세요.` });
     }
     const mime = imgResp.headers.get('content-type') || 'image/jpeg';
     const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
