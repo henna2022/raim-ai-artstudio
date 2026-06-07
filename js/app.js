@@ -17,6 +17,9 @@ let lastPrompt = "";
 let chatMessages = [];
 let currentImageUrl = null;
 let lastReview = { url: null, err: null };
+let quizOrder = [];
+let quizPos = 0;
+let quizScore = 0;
 
 // ===================== 번역 도우미 =====================
 function t(key) { return I18N[lang][key]; }
@@ -77,6 +80,7 @@ function setLang(code) {
     if (chatMessages.length === 1 && chatMessages[0].role === "assistant") chatMessages[0].content = t("chatGreeting");
     renderChat();
   }
+  else if (currentScreen === "s-gen") startQuiz();
 }
 document.getElementById("langBtn").onclick = (e) => {
   e.stopPropagation();
@@ -91,6 +95,57 @@ function show(id) {
   document.getElementById(id).classList.add("on");
   document.getElementById("homeBtn").style.display = (id === "s-home" || id === "s-intro") ? "none" : "block";
   window.scrollTo(0, 0);
+  if (id === "s-gen") startQuiz();
+}
+
+// ===================== 기다리는 동안 O/X 퀴즈 =====================
+function startQuiz() {
+  const list = I18N[lang].QUIZ || [];
+  quizOrder = list.map((_, i) => i);
+  for (let i = quizOrder.length - 1; i > 0; i--) { // 섞기
+    const j = Math.floor(Math.random() * (i + 1));
+    [quizOrder[i], quizOrder[j]] = [quizOrder[j], quizOrder[i]];
+  }
+  quizPos = 0;
+  quizScore = 0;
+  renderQuizQuestion();
+}
+function renderQuizQuestion() {
+  const card = document.getElementById("quizCard");
+  if (!card) return;
+  const list = I18N[lang].QUIZ || [];
+  if (!list.length) { card.innerHTML = ""; return; }
+  const q = list[quizOrder[quizPos]];
+  card.innerHTML =
+    '<div class="quizTitle">' + t("quizTitle") + "</div>" +
+    '<div class="quizQ">' + q[0] + "</div>" +
+    '<div class="quizBtns">' +
+      '<button class="quizBtn o" data-ans="1">' + t("quizO") + "</button>" +
+      '<button class="quizBtn x" data-ans="0">' + t("quizX") + "</button>" +
+    "</div>" +
+    '<div class="quizScore">' + fill(t("quizScore"), { n: quizScore }) + "</div>";
+  card.querySelectorAll(".quizBtn").forEach(btn => {
+    btn.onclick = () => answerQuiz(btn.dataset.ans === "1");
+  });
+}
+function answerQuiz(choice) {
+  const card = document.getElementById("quizCard");
+  if (!card) return;
+  const q = I18N[lang].QUIZ[quizOrder[quizPos]];
+  const correct = (choice === q[1]);
+  if (correct) quizScore++;
+  card.querySelectorAll(".quizBtn").forEach(b => { b.disabled = true; });
+  const fb = document.createElement("div");
+  fb.className = "quizFeedback fadeUp";
+  fb.innerHTML =
+    '<span class="res ' + (correct ? "ok" : "no") + '">' + t(correct ? "quizCorrect" : "quizWrong") + "</span>" +
+    '<span class="exp">' + q[2] + "</span>";
+  card.querySelector(".quizBtns").after(fb);
+  const next = document.createElement("button");
+  next.className = "quizNextBtn"; next.textContent = t("quizNext");
+  next.onclick = () => { quizPos = (quizPos + 1) % I18N[lang].QUIZ.length; renderQuizQuestion(); };
+  fb.after(next);
+  card.querySelector(".quizScore").textContent = fill(t("quizScore"), { n: quizScore });
 }
 function goHome() {
   picks = {}; stepIdx = 0; selectedTweaks = []; chatMessages = []; show("s-home");

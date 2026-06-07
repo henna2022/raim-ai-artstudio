@@ -87,6 +87,28 @@ export const I18N = {
       ["더 밝게", "전체적으로 더 밝고 화사하게"], ["더 크게", "주인공을 더 크고 가깝게"],
       ["친구 추가", "옆에 귀여운 친구를 한 명 더 추가"], ["반짝이 추가", "반짝이는 빛 효과를 잔뜩 추가"],
       ["더 단순하게", "배경을 단순하게 정리"], ["더 화려하게", "더 화려하고 디테일을 풍부하게"]],
+
+    // 그림 기다리는 동안 푸는 O/X 퀴즈
+    quizTitle: "🤖 AI 퀴즈! 기다리는 동안 풀어보자",
+    quizO: "⭕ 맞아요",
+    quizX: "❌ 아니에요",
+    quizCorrect: "정답이야! 🎉",
+    quizWrong: "아쉬워! 😅",
+    quizNext: "다음 문제 ➡️",
+    quizScore: "맞힌 개수: {n}",
+    // [문장, 정답(true=O / false=X), 설명]
+    QUIZ: [
+      ["AI는 우리가 글로 자세히 설명하면 그림을 그려줄 수 있어.", true, "맞아! 자세히 설명할수록 더 멋진 그림이 나와."],
+      ["AI는 사람처럼 진짜로 기쁘거나 슬픈 기분을 느껴.", false, "AI는 기분을 진짜로 느끼진 못해. 똑똑한 컴퓨터 프로그램이야."],
+      ["AI는 아주 많은 자료를 보고 공부해서 똑똑해진 거야.", true, "맞아! AI는 엄청나게 많은 자료로 학습해."],
+      ["AI도 가끔 틀린 답을 말할 때가 있어.", true, "맞아! 그래서 AI가 한 말도 한 번 더 확인하는 게 좋아."],
+      ["AI는 잠을 자야만 일을 할 수 있어.", false, "AI는 잠을 안 자도 돼. 컴퓨터니까!"],
+      ["'프롬프트'는 AI에게 무엇을 해달라고 적어주는 말이야.", true, "맞아! 좋은 프롬프트가 좋은 결과를 만들어."],
+      ["로봇과 AI는 완전히 똑같은 말이야.", false, "로봇은 몸(기계)이고, AI는 그 안의 똑똑한 두뇌 같은 거야."],
+      ["AI에게 자세히 설명할수록 내가 원하는 결과를 얻기 쉬워.", true, "맞아! 그래서 설명을 자세히 하는 게 중요해."],
+      ["AI는 세상에서 방금 일어난 가장 최신 소식까지 전부 알고 있어.", false, "AI는 배운 시점까지만 알아서 아주 최신 소식은 모를 수 있어."],
+      ["내 비밀번호나 집 주소는 함부로 AI에게 알려주지 않는 게 좋아.", true, "맞아! 중요한 개인정보는 잘 지키는 게 안전해."],
+    ],
   },
 
   // ===================================================== English
@@ -160,6 +182,28 @@ export const I18N = {
       ["Brighter", "brighter and more vivid overall"], ["Bigger", "the main character bigger and closer"],
       ["Add a friend", "add one more cute friend beside it"], ["Add sparkles", "add lots of sparkling light effects"],
       ["Simpler", "tidy up the background to be simpler"], ["Fancier", "make it fancier with richer details"]],
+
+    // O/X quiz to play while waiting for the picture
+    quizTitle: "🤖 AI Quiz! Play while you wait",
+    quizO: "⭕ True",
+    quizX: "❌ False",
+    quizCorrect: "Correct! 🎉",
+    quizWrong: "Oops! 😅",
+    quizNext: "Next question ➡️",
+    quizScore: "Correct: {n}",
+    // [statement, answer(true=O / false=X), explanation]
+    QUIZ: [
+      ["AI can draw a picture if we describe it in detail with words.", true, "Yes! The more detail you give, the cooler the picture."],
+      ["AI really feels happy or sad just like a person.", false, "AI doesn't really feel emotions. It's a smart computer program."],
+      ["AI became smart by studying a huge amount of data.", true, "Yes! AI learns from an enormous amount of data."],
+      ["AI sometimes gives wrong answers too.", true, "Yes! That's why it's good to double-check what AI says."],
+      ["AI must sleep before it can do any work.", false, "AI doesn't need sleep. It's a computer!"],
+      ["A 'prompt' is what we write to tell the AI what to do.", true, "Yes! A good prompt makes a good result."],
+      ["A robot and AI mean exactly the same thing.", false, "A robot is the body (machine); AI is like the smart brain inside."],
+      ["The more clearly you explain to AI, the easier it is to get what you want.", true, "Yes! That's why explaining clearly matters."],
+      ["AI already knows every piece of the very latest news in the world.", false, "AI only knows up to when it was trained, so it may miss very recent news."],
+      ["It's best not to give AI your password or home address.", true, "Right! Keeping important personal info safe is the smart choice."],
+    ],
   },
 
   // ===================================================== 中文
@@ -233,5 +277,27 @@ export const I18N = {
       ["更亮一点", "整体更明亮更鲜艳"], ["更大一点", "把主角画得更大更近"],
       ["加个朋友", "在旁边再加一个可爱的朋友"], ["加点闪光", "加上很多闪亮的光效"],
       ["更简单", "把背景整理得更简单"], ["更华丽", "更华丽、细节更丰富"]],
+
+    // 等图画的时候玩的 O/X 小测验
+    quizTitle: "🤖 AI 小测验！等待时来玩玩吧",
+    quizO: "⭕ 对",
+    quizX: "❌ 错",
+    quizCorrect: "答对啦！🎉",
+    quizWrong: "差一点！😅",
+    quizNext: "下一题 ➡️",
+    quizScore: "答对：{n}",
+    // [句子, 答案(true=对 / false=错), 解释]
+    QUIZ: [
+      ["如果我们用文字详细描述，AI 就能画出图画。", true, "对！描述得越详细，画出来就越棒。"],
+      ["AI 会像人一样真的感到开心或难过。", false, "AI 并不会真的有情绪，它是聪明的电脑程序。"],
+      ["AI 是看了非常多的资料学习后才变聪明的。", true, "对！AI 是用海量资料学习的。"],
+      ["AI 有时候也会说错答案。", true, "对！所以最好再确认一下 AI 说的话。"],
+      ["AI 必须先睡觉才能工作。", false, "AI 不用睡觉，因为它是电脑！"],
+      ["「提示词」就是我们写给 AI、告诉它要做什么的话。", true, "对！好的提示词能带来好的结果。"],
+      ["机器人和 AI 是完全一样的东西。", false, "机器人是身体（机器），AI 像是里面聪明的大脑。"],
+      ["你跟 AI 说得越清楚，就越容易得到你想要的结果。", true, "对！所以把话说清楚很重要。"],
+      ["AI 已经知道世界上刚刚发生的所有最新消息。", false, "AI 只知道它学习到的时间为止，最新消息可能并不知道。"],
+      ["不要随便把密码或家庭住址告诉 AI 比较好。", true, "对！保护好重要的个人信息才安全。"],
+    ],
   },
 };

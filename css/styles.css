@@ -123,6 +123,24 @@ h1.homeH1{font-size:40px;font-weight:800;margin:14px 0 4px;}
 .genBar span{display:block;height:100%;width:40%;background:linear-gradient(90deg,#ff9ec8,#a0c4ff);border-radius:20px;animation:load 1.3s ease-in-out infinite;}
 @keyframes load{0%{margin-left:-40%}100%{margin-left:100%}}
 
+/* QUIZ (mini-game while generating) */
+.quizCard{background:#fff;border-radius:26px;padding:22px 22px 24px;box-shadow:0 12px 0 rgba(170,140,200,.18);max-width:520px;margin:30px auto 0;text-align:center;}
+.quizTitle{font-size:19px;font-weight:800;color:#7a5fb0;margin-bottom:14px;}
+.quizQ{font-size:21px;font-weight:700;line-height:1.5;color:#4a3b60;min-height:64px;display:flex;align-items:center;justify-content:center;}
+.quizBtns{display:flex;gap:14px;justify-content:center;margin-top:16px;}
+.quizBtn{flex:1;max-width:170px;border:none;border-radius:22px;padding:18px 10px;font:inherit;font-size:22px;font-weight:800;cursor:pointer;transition:transform .14s ease;}
+.quizBtn:active{transform:translateY(2px);}
+.quizBtn.o{background:linear-gradient(160deg,#b9f0c8,#8fe0aa);color:#1f7a4a;box-shadow:0 6px 0 #6cc78c;}
+.quizBtn.x{background:linear-gradient(160deg,#ffc6c6,#ff9e9e);color:#b13838;box-shadow:0 6px 0 #ef8585;}
+.quizBtn:disabled{opacity:.55;cursor:default;box-shadow:none;transform:none;}
+.quizFeedback{margin-top:16px;font-size:18px;line-height:1.5;}
+.quizFeedback .res{font-size:22px;font-weight:800;display:block;margin-bottom:6px;}
+.quizFeedback .res.ok{color:#1f9d57;}
+.quizFeedback .res.no{color:#e0556a;}
+.quizFeedback .exp{color:#6b5a80;}
+.quizNextBtn{margin-top:16px;border:none;border-radius:22px;padding:12px 26px;font:inherit;font-size:18px;font-weight:800;cursor:pointer;background:linear-gradient(160deg,#a0c4ff,#7ea8ff);color:#fff;box-shadow:0 5px 0 var(--blueD);}
+.quizScore{margin-top:14px;font-size:15px;color:#a394b3;font-weight:700;}
+
 /* RESULT layout */
 .resultLayout{display:flex;gap:24px;justify-content:center;align-items:center;flex-wrap:wrap;}
 .qrCard{background:#fff;border-radius:26px;padding:22px;box-shadow:0 12px 0 rgba(170,140,200,.2);width:280px;text-align:center;}
