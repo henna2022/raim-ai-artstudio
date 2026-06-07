@@ -1,9 +1,8 @@
 {
-  "name": "ai-art-museum-gemini",
+  "name": "ai-art-museum",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "과학관 어린이용 AI 그림 생성 체험 (Gemini + Supabase + Vercel)",
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"
   }
