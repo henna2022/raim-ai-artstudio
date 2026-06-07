@@ -20,9 +20,12 @@ let lastReview = { url: null, err: null };
 let quizOrder = [];
 let quizPos = 0;
 let quizScore = 0;
+let genTimer = null;
 
 // ===================== 번역 도우미 =====================
 function t(key) { return I18N[lang][key]; }
+// 마침표(.。)가 나오면 줄바꿈 — 말줄임표(...)는 제외
+function breakSentences(text) { return String(text).replace(/(?<![.。])([.。])\s+(?![.。])/g, "$1\n"); }
 function steps() { return I18N[lang].STEPS; }
 function tweaks() { return I18N[lang].TWEAKS; }
 function fill(str, vars) { return str.replace(/\{(\w+)\}/g, (_, k) => (vars && k in vars) ? vars[k] : ""); }
@@ -95,8 +98,21 @@ function show(id) {
   document.getElementById(id).classList.add("on");
   document.getElementById("homeBtn").style.display = (id === "s-home" || id === "s-intro") ? "none" : "block";
   window.scrollTo(0, 0);
-  if (id === "s-gen") startQuiz();
+  if (id === "s-gen") { startQuiz(); startGenAnim(); }
+  else stopGenAnim();
 }
+
+// ===================== 생성 화면: 그림 그리는 라이미 2초마다 번갈아 =====================
+const GEN_IMAGES = ["assets/raimi_drawing_1.png", "assets/raimi_drawing_2.png"];
+function startGenAnim() {
+  stopGenAnim();
+  const el = document.getElementById("genPainter");
+  if (!el || el.tagName !== "IMG") return;
+  let i = 0;
+  el.src = GEN_IMAGES[0];
+  genTimer = setInterval(() => { i = (i + 1) % GEN_IMAGES.length; el.src = GEN_IMAGES[i]; }, 2000);
+}
+function stopGenAnim() { if (genTimer) { clearInterval(genTimer); genTimer = null; } }
 
 // ===================== 기다리는 동안 O/X 퀴즈 =====================
 function startQuiz() {
@@ -170,10 +186,10 @@ async function apiGenerate(prompt) {
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "생성 실패"); }
   return (await r.json()).url;
 }
-async function apiChat(messages) {
+async function apiChat(messages, mode) {
   const r = await fetch(API_BASE + "/api/chat", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, lang })
+    body: JSON.stringify({ messages, lang, mode })
   });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "대화 실패"); }
   return (await r.json()).reply;
@@ -311,7 +327,7 @@ function renderChat(loading) {
     row.style.justifyContent = m.role === "user" ? "flex-end" : "flex-start";
     if (m.role === "assistant") row.appendChild(raimiImg("avatarImg"));
     const b = document.createElement("div"); b.className = "bubble " + (m.role === "user" ? "bubbleUser" : "bubbleAI");
-    b.textContent = m.content; row.appendChild(b);
+    b.textContent = breakSentences(m.content); row.appendChild(b);
     sc.appendChild(row);
   });
   if (loading) {
@@ -353,7 +369,7 @@ document.getElementById("chatFinish").onclick = async () => {
     const summaryMsgs = chatMessages.filter(m => m.role !== "system").concat([
       { role: "user", content: "Based on what we talked about, describe the picture to draw in one detailed English paragraph. Output only the description sentences and nothing else." }
     ]);
-    const desc = await apiChat(summaryMsgs);
+    const desc = await apiChat(summaryMsgs, "describe");
     const url = await apiGenerate(desc);
     // 3) 곧바로 완성(QR) 화면으로
     renderResult(url);

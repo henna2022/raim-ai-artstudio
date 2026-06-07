@@ -12,19 +12,19 @@ export const I18N = {
   // ===================================================== 한국어
   ko: {
     appTitle: "AI 그림 마법사",
-    appSub: "나만의 그림을 만들어보자!",
+    appSub: "나만의 그림을 만들어봐요!",
     homeBtn: "🏠 처음으로",
 
     // 인트로
-    introHi: "안녕! 나는 그림 친구 라이미야 🤖🎨",
-    introTitle: "라이미와 함께 그림을 만들어보자!",
+    introHi: "안녕하세요! 저는 그림 친구 라이미예요 🤖🎨",
+    introTitle: "라이미와 함께 그림을 만들어봐요!",
     introBody:
-      "AI는 우리가 설명한 대로 그림을 그려줘.\n그래서 '무엇을 · 어디서 · 어떤 색으로 · 어떤 기분으로' 그릴지 자세히 말해줄수록 더 멋진 그림이 나와!\n\n이렇게 그림을 설명하는 말을 '프롬프트'라고 불러. 멋진 프롬프트가 멋진 그림을 만든단다. 자, 나랑 같이 만들어볼까? ✨",
-    introStart: "좋아, 시작하자! 🚀",
+      "AI는 <b>우리가 설명한 대로</b> 그림을 그려줘요.\n그래서 <b>'무엇을 · 어디서 · 어떤 색으로 · 어떤 기분으로'</b> 그릴지\n<b>자세히</b> 말해줄수록 더 멋진 그림이 나와요!\n\n이렇게 그림을 설명하는 말을 <b>'프롬프트'</b>라고 불러요.\n멋진 프롬프트가 멋진 그림을 만들어요.\n자, 저랑 같이 만들어볼까요? ✨",
+    introStart: "좋아요, 시작해요! 🚀",
 
     // 홈
-    homeH1: "어떻게 그림을 만들까?",
-    homeP: "둘 중에 하나를 골라봐! 🎉",
+    homeH1: "어떻게 그림을 만들까요?",
+    homeP: "둘 중에 하나를 골라봐요! 🎉",
     cardBlocksTitle: "블록으로 만들기",
     cardBlocksDesc: "버튼을 톡톡 골라서<br>쉽고 빠르게 그림 완성!",
     cardBlocksTag: "쉬워요 😊",
@@ -34,29 +34,29 @@ export const I18N = {
 
     // 채팅
     chatHeader: "🎨 그림 친구 라이미와 대화하기",
-    chatPlaceholder: "여기에 입력해봐...",
+    chatPlaceholder: "여기에 입력해봐요...",
     chatSend: "보내기",
     chatFinish: "🎨 이제 그림 만들기!",
     chatGreeting:
-      "안녕! 나는 그림 친구 라이미야 🎨\n오늘 어떤 그림을 만들고 싶어? 동물, 로봇, 우주... 뭐든 좋아! 떠오르는 걸 말해줘 😊",
-    chatError: "앗, 잠깐 문제가 생겼어. 다시 한 번 말해줄래? 🙏",
-    chatFinishMsg: "알겠어! 이제 그림을 그려줄게! 🎨",
-    chatFailMsg: "앗, 그림 만들기에 실패했어 ㅠㅠ 잠시 뒤에 버튼을 한 번 더 눌러줄래?",
+      "안녕하세요! 저는 그림 친구 라이미예요 🎨\n오늘 어떤 그림을 만들고 싶어요? 동물, 로봇, 우주... 뭐든 좋아요! 떠오르는 걸 말해줘요 😊",
+    chatError: "앗, 잠깐 문제가 생겼어요. 다시 한 번 말해줄래요? 🙏",
+    chatFinishMsg: "알겠어요! 이제 그림을 그려줄게요! 🎨",
+    chatFailMsg: "앗, 그림 만들기에 실패했어요 ㅠㅠ 잠시 뒤에 버튼을 한 번 더 눌러줄래요?",
 
     // 생성중
     genText: "그림을 그리는 중이에요...",
     genSub: "라이미가 열심히 색칠하고 있어요! ✨",
 
     // 리뷰
-    reviewH2: "그림이 완성됐어! 🎉",
+    reviewH2: "그림이 완성됐어요! 🎉",
     reviewErr: "앗, 그림 만들기에 실패했어요.<br>{err}<br>다시 해볼까요?",
-    reviewP: "마음에 들어? 아니면 조금 바꿔볼까?",
+    reviewP: "마음에 들어요? 아니면 조금 바꿔볼까요?",
     reviewFix: "🔄 이렇게 고치기 ({n})",
     reviewDone: "✅ 완성! 공유하기",
     reviewRetry: "🔄 다시 만들기",
 
     // 결과
-    resultH2: "🎉 완성! 멋진 작품이야! 🎉",
+    resultH2: "🎉 완성! 멋진 작품이에요! 🎉",
     qrTitle: "📱 QR로 가져가기",
     qrDesc: "휴대폰 카메라로 QR을 찍으면<br>내 그림을 볼 수 있어요!",
     qrWarn: "⏰ 이 QR은 <b>5시간 후에 사라져요.</b><br>그 전에 꼭 휴대폰에 저장해 주세요!",
@@ -89,25 +89,25 @@ export const I18N = {
       ["더 단순하게", "배경을 단순하게 정리"], ["더 화려하게", "더 화려하고 디테일을 풍부하게"]],
 
     // 그림 기다리는 동안 푸는 O/X 퀴즈
-    quizTitle: "🤖 AI 퀴즈! 기다리는 동안 풀어보자",
+    quizTitle: "🤖 AI 퀴즈! 기다리는 동안 풀어봐요",
     quizO: "⭕ 맞아요",
     quizX: "❌ 아니에요",
-    quizCorrect: "정답이야! 🎉",
-    quizWrong: "아쉬워! 😅",
+    quizCorrect: "정답이에요! 🎉",
+    quizWrong: "아쉬워요! 😅",
     quizNext: "다음 문제 ➡️",
     quizScore: "맞힌 개수: {n}",
     // [문장, 정답(true=O / false=X), 설명]
     QUIZ: [
-      ["AI는 우리가 글로 자세히 설명하면 그림을 그려줄 수 있어.", true, "맞아! 자세히 설명할수록 더 멋진 그림이 나와."],
-      ["AI는 사람처럼 진짜로 기쁘거나 슬픈 기분을 느껴.", false, "AI는 기분을 진짜로 느끼진 못해. 똑똑한 컴퓨터 프로그램이야."],
-      ["AI는 아주 많은 자료를 보고 공부해서 똑똑해진 거야.", true, "맞아! AI는 엄청나게 많은 자료로 학습해."],
-      ["AI도 가끔 틀린 답을 말할 때가 있어.", true, "맞아! 그래서 AI가 한 말도 한 번 더 확인하는 게 좋아."],
-      ["AI는 잠을 자야만 일을 할 수 있어.", false, "AI는 잠을 안 자도 돼. 컴퓨터니까!"],
-      ["'프롬프트'는 AI에게 무엇을 해달라고 적어주는 말이야.", true, "맞아! 좋은 프롬프트가 좋은 결과를 만들어."],
-      ["로봇과 AI는 완전히 똑같은 말이야.", false, "로봇은 몸(기계)이고, AI는 그 안의 똑똑한 두뇌 같은 거야."],
-      ["AI에게 자세히 설명할수록 내가 원하는 결과를 얻기 쉬워.", true, "맞아! 그래서 설명을 자세히 하는 게 중요해."],
-      ["AI는 세상에서 방금 일어난 가장 최신 소식까지 전부 알고 있어.", false, "AI는 배운 시점까지만 알아서 아주 최신 소식은 모를 수 있어."],
-      ["내 비밀번호나 집 주소는 함부로 AI에게 알려주지 않는 게 좋아.", true, "맞아! 중요한 개인정보는 잘 지키는 게 안전해."],
+      ["AI는 우리가 글로 자세히 설명하면 그림을 그려줄 수 있어요.", true, "맞아요! 자세히 설명할수록 더 멋진 그림이 나와요."],
+      ["AI는 사람처럼 진짜로 기쁘거나 슬픈 기분을 느껴요.", false, "AI는 기분을 진짜로 느끼진 못해요. 똑똑한 컴퓨터 프로그램이에요."],
+      ["AI는 아주 많은 자료를 보고 공부해서 똑똑해진 거예요.", true, "맞아요! AI는 엄청나게 많은 자료로 학습해요."],
+      ["AI도 가끔 틀린 답을 말할 때가 있어요.", true, "맞아요! 그래서 AI가 한 말도 한 번 더 확인하는 게 좋아요."],
+      ["AI는 잠을 자야만 일을 할 수 있어요.", false, "AI는 잠을 안 자도 돼요. 컴퓨터니까요!"],
+      ["'프롬프트'는 AI에게 무엇을 해달라고 적어주는 말이에요.", true, "맞아요! 좋은 프롬프트가 좋은 결과를 만들어요."],
+      ["로봇과 AI는 완전히 똑같은 말이에요.", false, "로봇은 몸(기계)이고, AI는 그 안의 똑똑한 두뇌 같은 거예요."],
+      ["AI에게 자세히 설명할수록 내가 원하는 결과를 얻기 쉬워요.", true, "맞아요! 그래서 설명을 자세히 하는 게 중요해요."],
+      ["AI는 세상에서 방금 일어난 가장 최신 소식까지 전부 알고 있어요.", false, "AI는 배운 시점까지만 알아서 아주 최신 소식은 모를 수 있어요."],
+      ["내 비밀번호나 집 주소는 함부로 AI에게 알려주지 않는 게 좋아요.", true, "맞아요! 중요한 개인정보는 잘 지키는 게 안전해요."],
     ],
   },
 
@@ -120,7 +120,7 @@ export const I18N = {
     introHi: "Hi! I'm Raimi, your drawing buddy 🤖🎨",
     introTitle: "Let's make a picture together with Raimi!",
     introBody:
-      "AI draws exactly what we describe.\nSo the more details you give — WHAT to draw, WHERE it is, WHICH colors, and WHAT mood — the cooler your picture turns out!\n\nThese describing words are called a 'prompt'. A great prompt makes a great picture. Come on, let's make one together! ✨",
+      "AI draws <b>exactly what we describe</b>.\nSo the more <b>detail</b> you give about <b>what · where · which colors · what mood</b> to draw,\nthe cooler your picture turns out!\n\nThese describing words are called a <b>'prompt'</b>.\nA great prompt makes a great picture.\nCome on, let's make one together! ✨",
     introStart: "Okay, let's start! 🚀",
 
     homeH1: "How shall we make a picture?",
@@ -215,7 +215,7 @@ export const I18N = {
     introHi: "你好！我是绘画好朋友莱米 🤖🎨",
     introTitle: "和莱米一起来画画吧！",
     introBody:
-      "AI 会照着我们说的话来画画。\n所以你说得越详细——画什么·在哪里·用什么颜色·什么心情——画出来就越棒！\n\n这些描述的话就叫做「提示词」(prompt)。好的提示词才能画出好的图画。来，我们一起来写吧！✨",
+      "AI 会<b>照着我们说的话</b>来画画。\n所以你把<b>画什么 · 在哪里 · 用什么颜色 · 什么心情</b>说得越<b>详细</b>，\n画出来就越棒！\n\n这些描述的话就叫做<b>「提示词」(prompt)</b>。\n好的提示词才能画出好的图画。\n来，我们一起来写吧！✨",
     introStart: "好，开始吧！🚀",
 
     homeH1: "我们要怎么画画呢？",

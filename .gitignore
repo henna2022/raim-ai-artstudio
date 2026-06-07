@@ -3,3 +3,5 @@ node_modules
 .env.local
 .vercel
 .env*
+assets/_orig
+.DS_Store

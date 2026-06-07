@@ -29,13 +29,22 @@ const SYSTEM_PROMPTS = {
     "当你觉得点子够多了，就用开心的语气简短地说一句『太好了！那就点下面的\\'现在来画图吧！\\'按钮 🎨』就好，绝不要写出图画描述。",
 };
 
+// '그림 만들기' 버튼을 누르면, 대화를 실제 이미지 생성용 프롬프트로 정리하는 모드.
+// (라이미 페르소나는 묘사를 금지하므로 이때는 페르소나를 쓰지 않는다 — 이게 기존 버그의 원인이었음)
+const DESCRIBE_PROMPT =
+  "You are an assistant that turns a child's conversation into ONE vivid, concrete English image-generation prompt. " +
+  "Read the WHOLE conversation and include every concrete thing the child asked for: the main subject, the place/background, the colors, the mood, and the art style. " +
+  "Keep details the child mentioned; do not invent unrelated objects. The picture must be child-friendly and safe. " +
+  "Output ONLY the final image description as a single English paragraph — no greetings, no quotes, no explanations, no labels.";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능해요.' });
   try {
-    const { messages, lang } = req.body || {};
+    const { messages, lang, mode } = req.body || {};
     if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages 배열이 필요해요.' });
 
-    const systemPrompt = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.ko;
+    const describe = mode === 'describe';
+    const systemPrompt = describe ? DESCRIBE_PROMPT : (SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.ko);
     const convo = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
 
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -44,8 +53,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: process.env.CHAT_MODEL || 'gpt-4.1-mini',
         messages: [{ role: 'system', content: systemPrompt }, ...convo],
-        max_tokens: 300,
-        temperature: 0.8,
+        max_tokens: describe ? 500 : 300,
+        temperature: describe ? 0.5 : 0.8,
       }),
     });
     const data = await r.json();
