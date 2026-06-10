@@ -62,6 +62,12 @@ export const I18N = {
     qrWarn: "⏰ 이 QR은 <b>5시간 후에 사라져요.</b><br>그 전에 꼭 휴대폰에 저장해 주세요!",
     againBtn: "🆕 새 그림 만들기",
 
+    // 10개 다 고른 뒤 안내 화면
+    moreTitle: "다 골랐어요! 🎉",
+    moreDesc: "이대로 그릴까요? 더 자세히 정하면 그림이 더 멋져져요!",
+    moreDrawNow: "🎨 이대로 그리기",
+    moreMore: "✏️ 더 자세히 정하기 (+5)",
+
     // 블록 단계
     STEPS: [
       { key: "subject", title: "무엇을 그릴까?", emoji: "🎨", options: [
@@ -82,6 +88,36 @@ export const I18N = {
         ["픽셀아트", "도트가 보이는 픽셀아트 스타일"], ["사실적", "실제 사진처럼 사실적인 스타일"]] },
       { key: "time", title: "언제일까?", emoji: "🕐", options: [
         ["한낮", "밝은 한낮"], ["노을", "주황빛 노을 질 때"], ["밤", "별빛 가득한 밤"], ["새벽", "안개 낀 새벽"]] },
+      { key: "size", title: "크기는 어때?", emoji: "🔍", options: [
+        ["작고 귀엽게", "작고 귀여운 크기로"], ["보통 크기", "적당한 보통 크기로"],
+        ["크고 멋지게", "크고 웅장한 크기로"], ["화면 가득", "화면을 가득 채울 만큼 크게"]] },
+      { key: "weather", title: "날씨는 어때?", emoji: "☁️", options: [
+        ["맑은 날", "화창하게 맑은 날씨"], ["비 오는 날", "촉촉하게 비 오는 날씨"],
+        ["눈 오는 날", "하얗게 눈 오는 날씨"], ["무지개", "비 갠 뒤 무지개가 뜬 날씨"]] },
+      { key: "companion", title: "누구와 함께?", emoji: "👫", options: [
+        ["혼자서", "혼자 있는 모습"], ["친구랑 둘이", "친구와 둘이 함께 있는 모습"],
+        ["여럿이", "여러 친구들과 다 같이 있는 모습"], ["동물이랑", "귀여운 동물 친구와 함께 있는 모습"]] },
+      { key: "special", title: "특별한 꾸밈은?", emoji: "🎀", options: [
+        ["반짝이", "반짝이는 별가루 장식"], ["날개", "등에 달린 예쁜 날개"], ["왕관", "머리에 쓴 반짝이는 왕관"],
+        ["풍선", "둥둥 떠다니는 풍선들"], ["없음", "특별한 장식 없이 깔끔하게"]] },
+    ],
+    // 더 자세히 정하기(+5) 추가 질문
+    STEPS_EXTRA: [
+      { key: "view", title: "어떻게 보일까?", emoji: "📷", options: [
+        ["가까이 크게", "주인공을 가까이 클로즈업해서"], ["전체가 보이게", "장면 전체가 한눈에 보이게"],
+        ["위에서 보기", "위에서 내려다보는 구도로"], ["아래에서 보기", "아래에서 올려다보는 구도로"]] },
+      { key: "light", title: "빛은 어떤 느낌?", emoji: "💡", options: [
+        ["따뜻한 햇살", "따뜻한 햇살이 비치는 빛"], ["반짝이는 빛", "사방이 반짝이는 빛"],
+        ["은은한 달빛", "은은하게 비치는 달빛"], ["알록달록 네온", "알록달록한 네온 불빛"]] },
+      { key: "detail", title: "얼마나 자세히?", emoji: "🔬", options: [
+        ["아주 단순하게", "아주 단순하고 깔끔하게"], ["보통", "적당한 디테일로"],
+        ["아주 자세하게", "아주 정교하고 자세하게"]] },
+      { key: "deco", title: "배경 장식은?", emoji: "🌟", options: [
+        ["별", "배경에 작은 별들이 가득"], ["꽃", "배경에 예쁜 꽃들이 가득"], ["하트", "배경에 귀여운 하트가 가득"],
+        ["거품", "배경에 동글동글 거품이 가득"], ["없음", "배경 장식 없이 깔끔하게"]] },
+      { key: "action", title: "무얼 하고 있을까?", emoji: "🏃", options: [
+        ["가만히", "가만히 멈춰 있는 모습"], ["달리는", "힘차게 달리는 모습"],
+        ["점프하는", "높이 점프하는 모습"], ["춤추는", "즐겁게 춤추는 모습"]] },
     ],
     TWEAKS: [
       ["더 밝게", "전체적으로 더 밝고 화사하게"], ["더 크게", "주인공을 더 크고 가깝게"],
@@ -158,6 +194,11 @@ export const I18N = {
     qrWarn: "⏰ This QR <b>disappears in 5 hours.</b><br>Be sure to save it to your phone before then!",
     againBtn: "🆕 Make a new picture",
 
+    moreTitle: "All set! 🎉",
+    moreDesc: "Draw it now? Adding more details makes your picture even cooler!",
+    moreDrawNow: "🎨 Draw it now",
+    moreMore: "✏️ Add more details (+5)",
+
     STEPS: [
       { key: "subject", title: "What shall we draw?", emoji: "🎨", options: [
         ["Cute animal", "a cute and lovable animal"], ["Cool robot", "a shiny cool robot"],
@@ -177,6 +218,35 @@ export const I18N = {
         ["Pixel art", "a dotted pixel-art style"], ["Realistic", "a photo-realistic style"]] },
       { key: "time", title: "What time is it?", emoji: "🕐", options: [
         ["Daytime", "bright daytime"], ["Sunset", "at orange sunset"], ["Night", "a starry night"], ["Dawn", "a misty dawn"]] },
+      { key: "size", title: "How big is it?", emoji: "🔍", options: [
+        ["Small & cute", "at a small cute size"], ["Medium", "at a normal medium size"],
+        ["Big & grand", "at a big grand size"], ["Fill the screen", "big enough to fill the whole screen"]] },
+      { key: "weather", title: "What's the weather?", emoji: "☁️", options: [
+        ["Sunny", "in sunny clear weather"], ["Rainy", "in gentle rainy weather"],
+        ["Snowy", "in white snowy weather"], ["Rainbow", "with a rainbow after the rain"]] },
+      { key: "companion", title: "Who is with them?", emoji: "👫", options: [
+        ["Alone", "all by themselves"], ["With a friend", "together with one friend"],
+        ["With many", "together with many friends"], ["With an animal", "with a cute animal friend"]] },
+      { key: "special", title: "Any special touch?", emoji: "🎀", options: [
+        ["Sparkles", "with sparkling stardust"], ["Wings", "with pretty wings on the back"], ["Crown", "with a shiny crown on the head"],
+        ["Balloons", "with floating balloons"], ["None", "clean with no special touch"]] },
+    ],
+    STEPS_EXTRA: [
+      { key: "view", title: "How is it framed?", emoji: "📷", options: [
+        ["Close-up", "a close-up of the main character"], ["Whole scene", "showing the whole scene at once"],
+        ["From above", "seen from above"], ["From below", "seen from below"]] },
+      { key: "light", title: "What kind of light?", emoji: "💡", options: [
+        ["Warm sunlight", "lit by warm sunlight"], ["Sparkling", "with sparkling light all around"],
+        ["Soft moonlight", "lit by soft glowing moonlight"], ["Neon", "with colorful neon lights"]] },
+      { key: "detail", title: "How detailed?", emoji: "🔬", options: [
+        ["Very simple", "very simple and clean"], ["Medium", "with moderate detail"],
+        ["Very detailed", "very intricate and detailed"]] },
+      { key: "deco", title: "Background decoration?", emoji: "🌟", options: [
+        ["Stars", "a background full of little stars"], ["Flowers", "a background full of pretty flowers"], ["Hearts", "a background full of cute hearts"],
+        ["Bubbles", "a background full of round bubbles"], ["None", "a clean background"]] },
+      { key: "action", title: "What are they doing?", emoji: "🏃", options: [
+        ["Still", "standing still"], ["Running", "running energetically"],
+        ["Jumping", "jumping high"], ["Dancing", "dancing joyfully"]] },
     ],
     TWEAKS: [
       ["Brighter", "brighter and more vivid overall"], ["Bigger", "the main character bigger and closer"],
@@ -253,6 +323,11 @@ export const I18N = {
     qrWarn: "⏰ 这个二维码<b>5 小时后会消失。</b><br>请一定在那之前保存到手机里！",
     againBtn: "🆕 画一张新图",
 
+    moreTitle: "都选好啦！🎉",
+    moreDesc: "就这样画吗？再选得详细一点，画出来会更棒哦！",
+    moreDrawNow: "🎨 就这样画",
+    moreMore: "✏️ 再选得详细点 (+5)",
+
     STEPS: [
       { key: "subject", title: "要画什么呢？", emoji: "🎨", options: [
         ["可爱的动物", "可爱又惹人喜爱的动物"], ["酷酷的机器人", "闪闪发光的酷机器人"],
@@ -272,6 +347,35 @@ export const I18N = {
         ["像素画", "看得到像素点的像素画风格"], ["写实", "像照片一样写实的风格"]] },
       { key: "time", title: "是什么时候？", emoji: "🕐", options: [
         ["白天", "明亮的白天"], ["晚霞", "橙色晚霞时分"], ["夜晚", "繁星满天的夜晚"], ["黎明", "薄雾的黎明"]] },
+      { key: "size", title: "大小怎么样？", emoji: "🔍", options: [
+        ["小巧可爱", "小巧可爱的大小"], ["普通大小", "适中的普通大小"],
+        ["又大又帅", "又大又雄伟的大小"], ["占满画面", "大到占满整个画面"]] },
+      { key: "weather", title: "天气怎么样？", emoji: "☁️", options: [
+        ["晴天", "阳光灿烂的晴天"], ["雨天", "湿润的雨天"],
+        ["雪天", "白茫茫的雪天"], ["彩虹", "雨过天晴出现彩虹"]] },
+      { key: "companion", title: "和谁在一起？", emoji: "👫", options: [
+        ["独自一人", "独自一人的样子"], ["和朋友两个", "和一个朋友在一起"],
+        ["一大群", "和好多朋友在一起"], ["和小动物", "和可爱的小动物在一起"]] },
+      { key: "special", title: "有什么特别装饰？", emoji: "🎀", options: [
+        ["闪光", "闪闪发光的星星粉装饰"], ["翅膀", "背上漂亮的翅膀"], ["皇冠", "头上闪亮的皇冠"],
+        ["气球", "飘浮的气球"], ["无", "干净利落没有特别装饰"]] },
+    ],
+    STEPS_EXTRA: [
+      { key: "view", title: "怎么呈现？", emoji: "📷", options: [
+        ["拉近特写", "把主角拉近特写"], ["全景", "一眼看到整个场景"],
+        ["俯视", "从上往下俯视的视角"], ["仰视", "从下往上仰视的视角"]] },
+      { key: "light", title: "光线什么感觉？", emoji: "💡", options: [
+        ["温暖阳光", "温暖阳光照耀的光线"], ["闪烁的光", "四周闪烁的光"],
+        ["柔和月光", "柔和的月光"], ["缤纷霓虹", "五彩缤纷的霓虹灯"]] },
+      { key: "detail", title: "要多细致？", emoji: "🔬", options: [
+        ["非常简单", "非常简单干净"], ["普通", "适中的细节"],
+        ["非常细致", "非常精致细腻"]] },
+      { key: "deco", title: "背景装饰呢？", emoji: "🌟", options: [
+        ["星星", "背景布满小星星"], ["花朵", "背景布满漂亮的花"], ["爱心", "背景布满可爱的爱心"],
+        ["泡泡", "背景布满圆圆的泡泡"], ["无", "干净的背景"]] },
+      { key: "action", title: "正在做什么？", emoji: "🏃", options: [
+        ["静止", "静静站着的样子"], ["奔跑", "用力奔跑的样子"],
+        ["跳跃", "高高跳起的样子"], ["跳舞", "开心跳舞的样子"]] },
     ],
     TWEAKS: [
       ["更亮一点", "整体更明亮更鲜艳"], ["更大一点", "把主角画得更大更近"],

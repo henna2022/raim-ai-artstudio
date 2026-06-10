@@ -12,6 +12,7 @@ if (!I18N[lang]) lang = "ko";
 let currentScreen = "s-intro";
 let picks = {};
 let stepIdx = 0;
+let extraMode = false; // "더 자세히 정하기(+5)"를 눌렀는지
 let selectedTweaks = [];
 let lastPrompt = "";
 let chatMessages = [];
@@ -24,9 +25,16 @@ let genTimer = null;
 
 // ===================== 번역 도우미 =====================
 function t(key) { return I18N[lang][key]; }
-// 마침표(.。)가 나오면 줄바꿈 — 말줄임표(...)는 제외
-function breakSentences(text) { return String(text).replace(/(?<![.。])([.。])\s+(?![.。])/g, "$1\n"); }
+// 마침표(.。)로 문장이 끝나면 줄바꿈 — 말줄임표(...)·소수점(3.14)은 제외
+function breakSentences(text) {
+  return String(text)
+    .replace(/(?<![.。\d])([.。])(?![.。\d])\s*/g, "$1\n")
+    .replace(/\n+$/, ""); // 끝에 생긴 줄바꿈 제거
+}
 function steps() { return I18N[lang].STEPS; }
+function extraSteps() { return I18N[lang].STEPS_EXTRA || []; }
+// 현재 활성화된 단계 목록 (기본 10개, +5를 누르면 15개)
+function activeSteps() { return extraMode ? steps().concat(extraSteps()) : steps(); }
 function tweaks() { return I18N[lang].TWEAKS; }
 function fill(str, vars) { return str.replace(/\{(\w+)\}/g, (_, k) => (vars && k in vars) ? vars[k] : ""); }
 
@@ -164,7 +172,7 @@ function answerQuiz(choice) {
   card.querySelector(".quizScore").textContent = fill(t("quizScore"), { n: quizScore });
 }
 function goHome() {
-  picks = {}; stepIdx = 0; selectedTweaks = []; chatMessages = []; show("s-home");
+  picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = []; show("s-home");
 }
 document.getElementById("homeBtn").onclick = goHome;
 document.getElementById("introStart").onclick = () => show("s-home");
@@ -172,7 +180,7 @@ document.getElementById("introStart").onclick = () => show("s-home");
 // ===================== 모드 선택 =====================
 document.querySelectorAll(".bigCard").forEach(b => {
   b.onclick = () => {
-    if (b.dataset.mode === "blocks") { picks = {}; stepIdx = 0; renderBlockStep(); show("s-blocks"); }
+    if (b.dataset.mode === "blocks") { picks = {}; stepIdx = 0; extraMode = false; renderBlockStep(); show("s-blocks"); }
     else { startChat(); show("s-chat"); }
   };
 });
@@ -198,16 +206,16 @@ async function apiChat(messages, mode) {
 // ===================== 블록 플로우 =====================
 function renderProgress() {
   const row = document.getElementById("progressRow"); row.innerHTML = "";
-  steps().forEach((s, i) => {
+  activeSteps().forEach((s, i) => {
     const d = document.createElement("span");
     d.className = "dot" + (i === stepIdx ? " active" : i < stepIdx ? " done" : "");
     row.appendChild(d);
   });
-  document.getElementById("stepLabel").textContent = (stepIdx + 1) + " / " + steps().length;
+  document.getElementById("stepLabel").textContent = (stepIdx + 1) + " / " + activeSteps().length;
 }
 function renderBlockStep() {
   renderProgress();
-  const step = steps()[stepIdx];
+  const step = activeSteps()[stepIdx];
   const wrap = document.getElementById("blockQuestion");
   wrap.innerHTML = "";
   const card = document.createElement("div");
@@ -218,7 +226,9 @@ function renderBlockStep() {
     const btn = document.createElement("button"); btn.className = "optBlock"; btn.textContent = label;
     btn.onclick = () => {
       picks[step.key] = value;
-      if (stepIdx < steps().length - 1) { stepIdx++; renderBlockStep(); }
+      // 기본 10개를 다 고른 시점: 안내 화면으로
+      if (!extraMode && stepIdx === steps().length - 1) { renderMoreChoice(); }
+      else if (stepIdx < activeSteps().length - 1) { stepIdx++; renderBlockStep(); }
       else { runGenerate(buildPrompt()); }
     };
     grid.appendChild(btn);
@@ -231,8 +241,33 @@ function renderBlockStep() {
     wrap.appendChild(back);
   }
 }
+// 기본 10개를 다 고른 뒤: 이대로 그릴지 / 5개 더 정할지
+function renderMoreChoice() {
+  document.getElementById("progressRow").innerHTML = "";
+  document.getElementById("stepLabel").textContent = steps().length + " / " + steps().length;
+  const wrap = document.getElementById("blockQuestion");
+  wrap.innerHTML = "";
+  const card = document.createElement("div");
+  card.className = "questionCard fadeUp";
+  card.innerHTML =
+    '<div class="qEmoji">🎉</div><h2 class="qTitle">' + t("moreTitle") + "</h2>" +
+    '<p class="moreDesc">' + t("moreDesc") + "</p>";
+  const row = document.createElement("div"); row.className = "btnRow";
+  const draw = document.createElement("button"); draw.className = "actionBtn primary";
+  draw.textContent = t("moreDrawNow");
+  draw.onclick = () => runGenerate(buildPrompt());
+  const more = document.createElement("button"); more.className = "actionBtn secondary";
+  more.textContent = t("moreMore");
+  more.onclick = () => { extraMode = true; stepIdx++; renderBlockStep(); };
+  row.appendChild(draw); row.appendChild(more);
+  card.appendChild(row);
+  wrap.appendChild(card);
+  const back = document.createElement("button"); back.className = "backBtn"; back.textContent = "←";
+  back.onclick = () => { stepIdx = steps().length - 1; renderBlockStep(); };
+  wrap.appendChild(back);
+}
 function buildPrompt(extra) {
-  const base = steps().map(s => picks[s.key]).filter(Boolean).join(", ");
+  const base = activeSteps().map(s => picks[s.key]).filter(Boolean).join(", ");
   const ex = (extra && extra.length) ? " / " + extra.join(", ") + "." : "";
   return base + "." + ex;
 }
