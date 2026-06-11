@@ -11,7 +11,7 @@ export const LANGS = [
 export const I18N = {
   // ===================================================== 한국어
   ko: {
-    appTitle: "AI 그림 마법사",
+    appTitle: "AI 그림 연구소",
     appSub: "나만의 그림을 만들어봐요!",
     homeBtn: "🏠 처음으로",
 
@@ -125,31 +125,31 @@ export const I18N = {
       ["더 단순하게", "배경을 단순하게 정리"], ["더 화려하게", "더 화려하고 디테일을 풍부하게"]],
 
     // 그림 기다리는 동안 푸는 O/X 퀴즈
-    quizTitle: "🤖 AI 퀴즈! 기다리는 동안 풀어봐요",
+    quizTitle: "AI 퀴즈! 기다리는 동안 풀어봐요",
     quizO: "⭕ 맞아요",
     quizX: "❌ 아니에요",
-    quizCorrect: "정답이에요! 🎉",
-    quizWrong: "아쉬워요! 😅",
-    quizNext: "다음 문제 ➡️",
+    quizCorrect: "정답입니다!",
+    quizWrong: "아쉬워요!",
+    quizNext: "다음 문제",
     quizScore: "맞힌 개수: {n}",
     // [문장, 정답(true=O / false=X), 설명]
     QUIZ: [
-      ["AI는 우리가 글로 자세히 설명하면 그림을 그려줄 수 있어요.", true, "맞아요! 자세히 설명할수록 더 멋진 그림이 나와요."],
+      ["AI는 우리가 글로 자세히 설명하면 그림을 그려줄 수 있어요.", true, "자세히 설명할수록 더 멋진 그림이 나와요."],
       ["AI는 사람처럼 진짜로 기쁘거나 슬픈 기분을 느껴요.", false, "AI는 기분을 진짜로 느끼진 못해요. 똑똑한 컴퓨터 프로그램이에요."],
-      ["AI는 아주 많은 자료를 보고 공부해서 똑똑해진 거예요.", true, "맞아요! AI는 엄청나게 많은 자료로 학습해요."],
-      ["AI도 가끔 틀린 답을 말할 때가 있어요.", true, "맞아요! 그래서 AI가 한 말도 한 번 더 확인하는 게 좋아요."],
+      ["AI는 아주 많은 자료를 보고 공부해서 똑똑해진 거예요.", true, "AI는 엄청나게 많은 자료로 학습해요."],
+      ["AI도 가끔 틀린 답을 말할 때가 있어요.", true, "그래서 AI가 한 말도 한 번 더 확인하는 게 좋아요."],
       ["AI는 잠을 자야만 일을 할 수 있어요.", false, "AI는 잠을 안 자도 돼요. 컴퓨터니까요!"],
-      ["'프롬프트'는 AI에게 무엇을 해달라고 적어주는 말이에요.", true, "맞아요! 좋은 프롬프트가 좋은 결과를 만들어요."],
+      ["'프롬프트'는 AI에게 무엇을 해달라고 적어주는 말이에요.", true, "좋은 프롬프트가 좋은 결과를 만들어요."],
       ["로봇과 AI는 완전히 똑같은 말이에요.", false, "로봇은 몸(기계)이고, AI는 그 안의 똑똑한 두뇌 같은 거예요."],
-      ["AI에게 자세히 설명할수록 내가 원하는 결과를 얻기 쉬워요.", true, "맞아요! 그래서 설명을 자세히 하는 게 중요해요."],
+      ["AI에게 자세히 설명할수록 내가 원하는 결과를 얻기 쉬워요.", true, "그래서 설명을 자세히 하는 게 중요해요."],
       ["AI는 세상에서 방금 일어난 가장 최신 소식까지 전부 알고 있어요.", false, "AI는 배운 시점까지만 알아서 아주 최신 소식은 모를 수 있어요."],
-      ["내 비밀번호나 집 주소는 함부로 AI에게 알려주지 않는 게 좋아요.", true, "맞아요! 중요한 개인정보는 잘 지키는 게 안전해요."],
+      ["내 비밀번호나 집 주소는 함부로 AI에게 알려주지 않는 게 좋아요.", true, "중요한 개인정보는 잘 지키는 게 안전해요."],
     ],
   },
 
   // ===================================================== English
   en: {
-    appTitle: "AI Art Wizard",
+    appTitle: "AI Art Lab",
     appSub: "Let's make your very own picture!",
     homeBtn: "🏠 Home",
 
@@ -254,31 +254,31 @@ export const I18N = {
       ["Simpler", "tidy up the background to be simpler"], ["Fancier", "make it fancier with richer details"]],
 
     // O/X quiz to play while waiting for the picture
-    quizTitle: "🤖 AI Quiz! Play while you wait",
+    quizTitle: "AI Quiz! Play while you wait",
     quizO: "⭕ True",
     quizX: "❌ False",
-    quizCorrect: "Correct! 🎉",
-    quizWrong: "Oops! 😅",
-    quizNext: "Next question ➡️",
+    quizCorrect: "Correct!",
+    quizWrong: "Oops!",
+    quizNext: "Next question",
     quizScore: "Correct: {n}",
     // [statement, answer(true=O / false=X), explanation]
     QUIZ: [
-      ["AI can draw a picture if we describe it in detail with words.", true, "Yes! The more detail you give, the cooler the picture."],
+      ["AI can draw a picture if we describe it in detail with words.", true, "The more detail you give, the cooler the picture."],
       ["AI really feels happy or sad just like a person.", false, "AI doesn't really feel emotions. It's a smart computer program."],
-      ["AI became smart by studying a huge amount of data.", true, "Yes! AI learns from an enormous amount of data."],
-      ["AI sometimes gives wrong answers too.", true, "Yes! That's why it's good to double-check what AI says."],
+      ["AI became smart by studying a huge amount of data.", true, "AI learns from an enormous amount of data."],
+      ["AI sometimes gives wrong answers too.", true, "That's why it's good to double-check what AI says."],
       ["AI must sleep before it can do any work.", false, "AI doesn't need sleep. It's a computer!"],
-      ["A 'prompt' is what we write to tell the AI what to do.", true, "Yes! A good prompt makes a good result."],
+      ["A 'prompt' is what we write to tell the AI what to do.", true, "A good prompt makes a good result."],
       ["A robot and AI mean exactly the same thing.", false, "A robot is the body (machine); AI is like the smart brain inside."],
-      ["The more clearly you explain to AI, the easier it is to get what you want.", true, "Yes! That's why explaining clearly matters."],
+      ["The more clearly you explain to AI, the easier it is to get what you want.", true, "That's why explaining clearly matters."],
       ["AI already knows every piece of the very latest news in the world.", false, "AI only knows up to when it was trained, so it may miss very recent news."],
-      ["It's best not to give AI your password or home address.", true, "Right! Keeping important personal info safe is the smart choice."],
+      ["It's best not to give AI your password or home address.", true, "Keeping important personal info safe is the smart choice."],
     ],
   },
 
   // ===================================================== 中文
   zh: {
-    appTitle: "AI 绘画魔法师",
+    appTitle: "AI 绘画研究所",
     appSub: "来创作属于你自己的图画吧！",
     homeBtn: "🏠 回首页",
 
@@ -383,25 +383,25 @@ export const I18N = {
       ["更简单", "把背景整理得更简单"], ["更华丽", "更华丽、细节更丰富"]],
 
     // 等图画的时候玩的 O/X 小测验
-    quizTitle: "🤖 AI 小测验！等待时来玩玩吧",
+    quizTitle: "AI 小测验！等待时来玩玩吧",
     quizO: "⭕ 对",
     quizX: "❌ 错",
-    quizCorrect: "答对啦！🎉",
-    quizWrong: "差一点！😅",
-    quizNext: "下一题 ➡️",
+    quizCorrect: "答对啦！",
+    quizWrong: "差一点！",
+    quizNext: "下一题",
     quizScore: "答对：{n}",
     // [句子, 答案(true=对 / false=错), 解释]
     QUIZ: [
-      ["如果我们用文字详细描述，AI 就能画出图画。", true, "对！描述得越详细，画出来就越棒。"],
+      ["如果我们用文字详细描述，AI 就能画出图画。", true, "描述得越详细，画出来就越棒。"],
       ["AI 会像人一样真的感到开心或难过。", false, "AI 并不会真的有情绪，它是聪明的电脑程序。"],
-      ["AI 是看了非常多的资料学习后才变聪明的。", true, "对！AI 是用海量资料学习的。"],
-      ["AI 有时候也会说错答案。", true, "对！所以最好再确认一下 AI 说的话。"],
+      ["AI 是看了非常多的资料学习后才变聪明的。", true, "AI 是用海量资料学习的。"],
+      ["AI 有时候也会说错答案。", true, "所以最好再确认一下 AI 说的话。"],
       ["AI 必须先睡觉才能工作。", false, "AI 不用睡觉，因为它是电脑！"],
-      ["「提示词」就是我们写给 AI、告诉它要做什么的话。", true, "对！好的提示词能带来好的结果。"],
+      ["「提示词」就是我们写给 AI、告诉它要做什么的话。", true, "好的提示词能带来好的结果。"],
       ["机器人和 AI 是完全一样的东西。", false, "机器人是身体（机器），AI 像是里面聪明的大脑。"],
-      ["你跟 AI 说得越清楚，就越容易得到你想要的结果。", true, "对！所以把话说清楚很重要。"],
+      ["你跟 AI 说得越清楚，就越容易得到你想要的结果。", true, "所以把话说清楚很重要。"],
       ["AI 已经知道世界上刚刚发生的所有最新消息。", false, "AI 只知道它学习到的时间为止，最新消息可能并不知道。"],
-      ["不要随便把密码或家庭住址告诉 AI 比较好。", true, "对！保护好重要的个人信息才安全。"],
+      ["不要随便把密码或家庭住址告诉 AI 比较好。", true, "保护好重要的个人信息才安全。"],
     ],
   },
 };

@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js";
+import { I18N, LANGS } from "./i18n.js?v=3";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -62,8 +62,8 @@ function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
-  const cur = LANGS.find(l => l.code === lang);
-  document.getElementById("langCurrent").textContent = cur ? cur.label : lang;
+  // 언어 버튼은 항상 'LANG'으로 표기 (메뉴에서 한국어/English/中文 선택)
+  document.getElementById("langCurrent").textContent = "LANG";
 }
 
 // ===================== 언어 전환 =====================
@@ -146,8 +146,7 @@ function renderQuizQuestion() {
     '<div class="quizBtns">' +
       '<button class="quizBtn o" data-ans="1">' + t("quizO") + "</button>" +
       '<button class="quizBtn x" data-ans="0">' + t("quizX") + "</button>" +
-    "</div>" +
-    '<div class="quizScore">' + fill(t("quizScore"), { n: quizScore }) + "</div>";
+    "</div>";
   card.querySelectorAll(".quizBtn").forEach(btn => {
     btn.onclick = () => answerQuiz(btn.dataset.ans === "1");
   });
@@ -169,7 +168,6 @@ function answerQuiz(choice) {
   next.className = "quizNextBtn"; next.textContent = t("quizNext");
   next.onclick = () => { quizPos = (quizPos + 1) % I18N[lang].QUIZ.length; renderQuizQuestion(); };
   fb.after(next);
-  card.querySelector(".quizScore").textContent = fill(t("quizScore"), { n: quizScore });
 }
 function goHome() {
   picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = []; show("s-home");
