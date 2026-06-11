@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js?v=3";
+import { I18N, LANGS } from "./i18n.js?v=4";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -25,10 +25,17 @@ let genTimer = null;
 
 // ===================== 번역 도우미 =====================
 function t(key) { return I18N[lang][key]; }
-// 마침표(.。)로 문장이 끝나면 줄바꿈 — 말줄임표(...)·소수점(3.14)은 제외
+// 문장이 끝나면(. ? ! 。 ？ ！) 줄바꿈 — 말줄임표(...)·소수점(3.14)은 제외
 function breakSentences(text) {
   return String(text)
-    .replace(/(?<![.。\d])([.。])(?![.。\d])\s*/g, "$1\n")
+    .replace(/([.?!。？！]+)(\s*)/g, (m, punct, _ws, offset, str) => {
+      const prev = str[offset - 1], next = str[offset + m.length];
+      // 소수점: 점 하나가 숫자 사이에 있으면 줄바꿈 안 함 (예: 3.14)
+      if (punct === "." && /\d/.test(prev || "") && /\d/.test(next || "")) return m;
+      // 말줄임표: 점·마침표만 2개 이상이면 문장 끝이 아니라 보고 줄바꿈 안 함 (예: 우주...)
+      if (/^[.。]{2,}$/.test(punct)) return m;
+      return punct + "\n";
+    })
     .replace(/\n+$/, ""); // 끝에 생긴 줄바꿈 제거
 }
 function steps() { return I18N[lang].STEPS; }
