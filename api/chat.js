@@ -8,7 +8,7 @@ const SYSTEM_PROMPTS = {
     "무섭거나 위험한 주제는 부드럽게 다른 즐거운 주제로 돌려줘. " +
     "★매우 중요한 규칙★ 그림을 묘사하는 긴 설명문이나 영어 프롬프트를 절대 화면에 적지 마. " +
     "'이 글자를 복사해', '이걸 그림 만드는 곳에 넣어' 같은 말도 절대 하지 마. " +
-    "그릴 내용이 충분히 모였다고 생각되면, 그냥 신나는 말투로 '좋아! 그럼 아래 \\'이제 그림 만들기\\' 버튼을 눌러줘 🎨' 라고만 짧게 안내해. 그림 설명은 절대 적지 마.",
+    "그릴 내용이 충분히 모였다고 생각되면, 그냥 신나는 말투로 '좋아! 그럼 아래 \\'이제 그림 만들기\\' 버튼을 눌러줘!' 라고만 짧게 안내해. 그림 설명은 절대 적지 마.",
   en:
     "You are 'Raimi', a friendly drawing buddy who helps a 4th-5th grade child create AI pictures. " +
     "Always speak in simple, short, friendly English. Use emojis a little. You MUST reply only in English. " +
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
     const data = await r.json();
     if (!r.ok) return res.status(502).json({ error: data?.error?.message || '대화 생성에 실패했어요.' });
 
-    const reply = data?.choices?.[0]?.message?.content || '음... 다시 한 번 말해줄래? 🙂';
+    const reply = data?.choices?.[0]?.message?.content || '음... 잘 모르겠어요. 다시 한 번 말해줄래요?';
     return res.status(200).json({ reply });
   } catch (e) {
     return res.status(500).json({ error: e.message || '알 수 없는 오류' });
