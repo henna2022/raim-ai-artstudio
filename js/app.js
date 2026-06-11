@@ -295,34 +295,15 @@ function renderReview(url, err) {
   let html = '<div class="fadeUp center"><h2 class="reviewH2">' + t("reviewH2") + "</h2>";
   if (err) { html += '<div class="errBox">' + fill(t("reviewErr"), { err }) + "</div>"; }
   else { html += '<div class="artFrame"><img src="' + url + '" alt="art"></div>'; }
-  html += '<p class="reviewP">' + t("reviewP") + '</p><div class="tweakGrid" id="tweakGrid"></div>';
   html += '<div class="btnRow" id="reviewBtns"></div></div>';
   s.innerHTML = html;
 
-  const grid = document.getElementById("tweakGrid");
-  selectedTweaks = [];
-  tweaks().forEach(([label, value]) => {
-    const c = document.createElement("button"); c.className = "tweakChip"; c.textContent = "+ " + label;
-    c.onclick = () => {
-      const i = selectedTweaks.indexOf(value);
-      if (i >= 0) { selectedTweaks.splice(i, 1); c.classList.remove("on"); c.textContent = "+ " + label; }
-      else { selectedTweaks.push(value); c.classList.add("on"); c.textContent = "✓ " + label; }
-      renderReviewButtons();
-    };
-    grid.appendChild(c);
-  });
   renderReviewButtons();
   show("s-review");
 }
 function renderReviewButtons() {
   const row = document.getElementById("reviewBtns"); if (!row) return;
   row.innerHTML = "";
-  if (selectedTweaks.length > 0) {
-    const fix = document.createElement("button"); fix.className = "actionBtn secondary";
-    fix.textContent = fill(t("reviewFix"), { n: selectedTweaks.length });
-    fix.onclick = () => runGenerate(buildPrompt(selectedTweaks.slice()));
-    row.appendChild(fix);
-  }
   if (currentImageUrl) {
     const done = document.createElement("button"); done.className = "actionBtn primary";
     done.textContent = t("reviewDone");
