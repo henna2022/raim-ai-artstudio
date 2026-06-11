@@ -24,7 +24,7 @@ export const I18N = {
 
     // 홈
     homeH1: "어떻게 그림을 만들까요?",
-    homeP: "둘 중에 하나를 골라봐요! 🎉",
+    homeP: "둘 중에 하나를 골라봐요!",
     cardBlocksTitle: "블록으로 만들기",
     cardBlocksDesc: "버튼을 톡톡 골라서<br>쉽고 빠르게 그림 완성!",
     cardBlocksTag: "쉬워요",
@@ -48,7 +48,7 @@ export const I18N = {
     genSub: "라이미가 열심히 색칠하고 있어요!",
 
     // 리뷰
-    reviewH2: "그림이 완성됐어요!",
+    reviewH2: "그림이 완성됐어요! 🎉",
     reviewErr: "앗, 그림 만들기에 실패했어요.<br>{err}<br>다시 해볼까요?",
     reviewP: "마음에 들어요? 아니면 조금 바꿔볼까요?",
     reviewFix: "이렇게 고치기 ({n})",
@@ -56,7 +56,7 @@ export const I18N = {
     reviewRetry: "다시 만들기",
 
     // 결과
-    resultH2: "완성! 멋진 작품이에요!",
+    resultH2: "멋진 작품이 완성됐어요! 🎉",
     qrTitle: "📱 QR로 가져가기",
     qrDesc: "휴대폰 카메라로 QR을 찍으면<br>내 그림을 볼 수 있어요!",
     qrWarn: "⏰ 이 QR은 <b>5시간 후에 사라져요.</b><br>그 전에 꼭 휴대폰에 저장해 주세요!",
@@ -97,7 +97,7 @@ export const I18N = {
       { key: "companion", title: "누구와 함께?", emoji: "👫", options: [
         ["혼자서", "혼자 있는 모습"], ["친구랑 둘이", "친구와 둘이 함께 있는 모습"],
         ["여럿이", "여러 친구들과 다 같이 있는 모습"], ["동물이랑", "귀여운 동물 친구와 함께 있는 모습"]] },
-      { key: "special", title: "특별한 꾸밈은?", emoji: "🎀", options: [
+      { key: "special", title: "뭘 더 추가할까?", emoji: "🎀", options: [
         ["반짝이", "반짝이는 별가루 장식"], ["날개", "등에 달린 예쁜 날개"], ["왕관", "머리에 쓴 반짝이는 왕관"],
         ["풍선", "둥둥 떠다니는 풍선들"], ["없음", "특별한 장식 없이 깔끔하게"]] },
     ],
