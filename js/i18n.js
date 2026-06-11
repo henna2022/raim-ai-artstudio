@@ -16,57 +16,57 @@ export const I18N = {
     homeBtn: "🏠 처음으로",
 
     // 인트로
-    introHi: "안녕하세요! 저는 그림 친구 라이미예요 🤖🎨",
+    introHi: "안녕하세요! 저는 그림 친구 라이미예요",
     introTitle: "라이미와 함께 그림을 만들어봐요!",
     introBody:
       "AI는 <b>우리가 설명한 대로</b> 그림을 그려줘요.\n그래서 <b>'무엇을 · 어디서 · 어떤 색으로 · 어떤 기분으로'</b> 그릴지\n<b>자세히</b> 말해줄수록 더 멋진 그림이 나와요!\n\n이렇게 그림을 설명하는 말을 <b>'프롬프트'</b>라고 불러요.\n멋진 프롬프트가 멋진 그림을 만들어요.\n자, 저랑 같이 만들어볼까요? ✨",
-    introStart: "좋아요, 시작해요! 🚀",
+    introStart: "시작해봅시다!",
 
     // 홈
     homeH1: "어떻게 그림을 만들까요?",
     homeP: "둘 중에 하나를 골라봐요! 🎉",
     cardBlocksTitle: "블록으로 만들기",
     cardBlocksDesc: "버튼을 톡톡 골라서<br>쉽고 빠르게 그림 완성!",
-    cardBlocksTag: "쉬워요 😊",
+    cardBlocksTag: "쉬워요",
     cardChatTitle: "대화하며 만들기",
     cardChatDesc: "라이미와 이야기하며<br>내 맘대로 그림 만들기!",
-    cardChatTag: "자유로워요 ✨",
+    cardChatTag: "자유로워요",
 
     // 채팅
-    chatHeader: "🎨 그림 친구 라이미와 대화하기",
+    chatHeader: "그림 친구 라이미와 대화하기",
     chatPlaceholder: "여기에 입력해봐요...",
     chatSend: "보내기",
-    chatFinish: "🎨 이제 그림 만들기!",
+    chatFinish: "그림 제작하기!",
     chatGreeting:
-      "안녕하세요! 저는 그림 친구 라이미예요 🎨\n오늘 어떤 그림을 만들고 싶어요? 동물, 로봇, 우주... 뭐든 좋아요! 떠오르는 걸 말해줘요 😊",
-    chatError: "앗, 잠깐 문제가 생겼어요. 다시 한 번 말해줄래요? 🙏",
-    chatFinishMsg: "알겠어요! 이제 그림을 그려줄게요! 🎨",
+      "안녕하세요! 저는 그림 친구 라이미예요 \n오늘 어떤 그림을 만들고 싶어요? 동물, 로봇, 우주... 뭐든 좋아요! 떠오르는 걸 말해주세요",
+    chatError: "앗, 잠깐 문제가 생겼어요. 다시 한 번 말해줄래요?",
+    chatFinishMsg: "알겠어요! 이제 그림을 그려줄게요!",
     chatFailMsg: "앗, 그림 만들기에 실패했어요 ㅠㅠ 잠시 뒤에 버튼을 한 번 더 눌러줄래요?",
 
     // 생성중
     genText: "그림을 그리는 중이에요...",
-    genSub: "라이미가 열심히 색칠하고 있어요! ✨",
+    genSub: "라이미가 열심히 색칠하고 있어요!",
 
     // 리뷰
-    reviewH2: "그림이 완성됐어요! 🎉",
+    reviewH2: "그림이 완성됐어요!",
     reviewErr: "앗, 그림 만들기에 실패했어요.<br>{err}<br>다시 해볼까요?",
     reviewP: "마음에 들어요? 아니면 조금 바꿔볼까요?",
-    reviewFix: "🔄 이렇게 고치기 ({n})",
-    reviewDone: "✅ 완성! 공유하기",
-    reviewRetry: "🔄 다시 만들기",
+    reviewFix: "이렇게 고치기 ({n})",
+    reviewDone: "완성! 공유하기",
+    reviewRetry: "다시 만들기",
 
     // 결과
-    resultH2: "🎉 완성! 멋진 작품이에요! 🎉",
+    resultH2: "완성! 멋진 작품이에요!",
     qrTitle: "📱 QR로 가져가기",
     qrDesc: "휴대폰 카메라로 QR을 찍으면<br>내 그림을 볼 수 있어요!",
     qrWarn: "⏰ 이 QR은 <b>5시간 후에 사라져요.</b><br>그 전에 꼭 휴대폰에 저장해 주세요!",
-    againBtn: "🆕 새 그림 만들기",
+    againBtn: "새 그림 만들기",
 
     // 10개 다 고른 뒤 안내 화면
-    moreTitle: "다 골랐어요! 🎉",
+    moreTitle: "다 골랐어요!",
     moreDesc: "이대로 그릴까요? 더 자세히 정하면 그림이 더 멋져져요!",
-    moreDrawNow: "🎨 이대로 그리기",
-    moreMore: "✏️ 더 자세히 정하기 (+5)",
+    moreDrawNow: "이대로 그리기",
+    moreMore: "더 자세히 정하기 (+5)",
 
     // 블록 단계
     STEPS: [
@@ -153,51 +153,51 @@ export const I18N = {
     appSub: "Let's make your very own picture!",
     homeBtn: "🏠 Home",
 
-    introHi: "Hi! I'm Raimi, your drawing buddy 🤖🎨",
+    introHi: "Hi! I'm Raimi, your drawing AI buddy",
     introTitle: "Let's make a picture together with Raimi!",
     introBody:
       "AI draws <b>exactly what we describe</b>.\nSo the more <b>detail</b> you give about <b>what · where · which colors · what mood</b> to draw,\nthe cooler your picture turns out!\n\nThese describing words are called a <b>'prompt'</b>.\nA great prompt makes a great picture.\nCome on, let's make one together! ✨",
-    introStart: "Okay, let's start! 🚀",
+    introStart: "Okay, let's start!",
 
     homeH1: "How shall we make a picture?",
     homeP: "Pick one of the two! 🎉",
     cardBlocksTitle: "Build with blocks",
     cardBlocksDesc: "Tap the buttons to<br>finish your picture fast and easy!",
-    cardBlocksTag: "Easy 😊",
+    cardBlocksTag: "Easy",
     cardChatTitle: "Make it by chatting",
     cardChatDesc: "Chat with Raimi and<br>make any picture you want!",
-    cardChatTag: "Free & fun ✨",
+    cardChatTag: "Free & fun",
 
-    chatHeader: "🎨 Chat with Raimi, your art buddy",
+    chatHeader: "Chat with Raimi, your art buddy",
     chatPlaceholder: "Type here...",
     chatSend: "Send",
-    chatFinish: "🎨 Make the picture now!",
+    chatFinish: "Make the picture now!",
     chatGreeting:
-      "Hi! I'm Raimi, your drawing buddy 🎨\nWhat picture would you like to make today? Animals, robots, space... anything! Tell me what comes to mind 😊",
-    chatError: "Oops, something went wrong. Could you say that again? 🙏",
-    chatFinishMsg: "Got it! Let me draw it for you now! 🎨",
+      "Hi! I'm Raimi, your drawing AI buddy \nWhat picture would you like to make today? Animals, robots, space... anything! Tell me what comes to mind :D",
+    chatError: "Oops, something went wrong. Could you say that again?",
+    chatFinishMsg: "Got it! Let me draw it for you now!",
     chatFailMsg: "Oops, I couldn't make the picture ㅠㅠ Could you tap the button once more in a moment?",
 
     genText: "Drawing your picture...",
-    genSub: "Raimi is busy coloring it in! ✨",
+    genSub: "Raimi is busy coloring it in!",
 
-    reviewH2: "Your picture is ready! 🎉",
+    reviewH2: "Your picture is ready!",
     reviewErr: "Oops, making the picture failed.<br>{err}<br>Shall we try again?",
     reviewP: "Do you like it? Or shall we change it a bit?",
-    reviewFix: "🔄 Fix it like this ({n})",
-    reviewDone: "✅ Done! Share it",
-    reviewRetry: "🔄 Try again",
+    reviewFix: "Fix it like this ({n})",
+    reviewDone: "Done! Share it",
+    reviewRetry: "Try again",
 
-    resultH2: "🎉 Done! What a masterpiece! 🎉",
+    resultH2: "Done! What a masterpiece!",
     qrTitle: "📱 Take it with a QR code",
     qrDesc: "Scan the QR with your phone camera<br>to see your picture!",
     qrWarn: "⏰ This QR <b>disappears in 5 hours.</b><br>Be sure to save it to your phone before then!",
-    againBtn: "🆕 Make a new picture",
+    againBtn: "Make a new picture",
 
-    moreTitle: "All set! 🎉",
+    moreTitle: "All set!",
     moreDesc: "Draw it now? Adding more details makes your picture even cooler!",
-    moreDrawNow: "🎨 Draw it now",
-    moreMore: "✏️ Add more details (+5)",
+    moreDrawNow: "Draw it now",
+    moreMore: "Add more details (+5)",
 
     STEPS: [
       { key: "subject", title: "What shall we draw?", emoji: "🎨", options: [

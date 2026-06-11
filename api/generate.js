@@ -14,11 +14,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '그림 설명이 필요해요.' });
     }
 
-    const banned = ['누드','나체','섹스','성인','야한','폭력','피','살해','죽이','자살','마약','담배','술',
-                    'nude','naked','sex','sexual','nsfw','porn','blood','gore','kill','suicide','drug','weapon','gun'];
+    const banned = ['누드','나체','섹스','성인','야한','폭력','피','살해','죽이','자살','마약','담배','술','칼',
+                    'nude','naked','sex','sexual','nsfw','porn','blood','gore','kill','suicide','drug','weapon','gun','knife'];
     const low = prompt.toLowerCase();
     if (banned.some((w) => low.includes(w.toLowerCase()))) {
-      return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요? 🙂' });
+      return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?' });
     }
 
     const safePrompt =
