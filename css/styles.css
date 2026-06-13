@@ -35,8 +35,10 @@ header{position:relative;z-index:2;display:flex;align-items:center;gap:14px;padd
 .langOpt:hover{background:#eef4ff;}
 .langOpt.active{background:#deeaff;color:#3f6bd6;font-weight:800;}
 
-main{position:relative;z-index:2;padding:14px 18px 18px;max-width:1180px;margin:0 auto;width:100%;
+main{position:relative;z-index:2;padding:14px 18px 8px;max-width:1180px;margin:0 auto;width:100%;
   flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;overflow:visible;}
+.siteFooter{flex:none;position:relative;z-index:2;text-align:center;padding:6px 12px 10px;
+  font-size:12px;color:#b9c2d2;opacity:.35;letter-spacing:.2px;}
 .screen{display:none;}
 .screen.on{display:block;}
 
