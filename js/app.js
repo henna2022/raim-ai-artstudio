@@ -283,9 +283,9 @@ async function runGenerate(prompt) {
   show("s-gen");
   try {
     const url = await apiGenerate(prompt);
-    renderReview(url, null);
+    renderResult(url); // 리뷰 단계 없이 바로 결과(이미지+QR) 화면으로
   } catch (e) {
-    renderReview(null, e.message);
+    renderReview(null, e.message); // 실패 시에만 리뷰 화면(에러+다시 시도)
   }
 }
 function renderReview(url, err) {
