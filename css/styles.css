@@ -10,8 +10,11 @@ body{
   font-family:'Pretendard','Gaegu','Jua',sans-serif; color:var(--ink);
   background:linear-gradient(160deg,#eaf2ff 0%,#dbe9ff 50%,#eef6ff 100%);
   overflow:hidden; -webkit-tap-highlight-color:transparent;
-  height:100vh; display:flex; flex-direction:column;
+  height:100vh; position:relative;
 }
+/* 고정 디자인(1340x800)을 기기 화면에 비율 유지하며 꽉 차게 자동 확대/축소 */
+#appScale{position:absolute;top:0;left:0;width:1340px;height:800px;
+  display:flex;flex-direction:column;transform-origin:top left;}
 .blob{position:fixed;border-radius:50%;filter:blur(45px);opacity:.5;z-index:0;pointer-events:none;}
 .b1{width:340px;height:340px;background:#cfe0ff;top:-80px;left:-60px;animation:float 9s ease-in-out infinite;}
 .b2{width:300px;height:300px;background:#bfe3ff;bottom:-70px;right:-50px;animation:float 11s ease-in-out infinite;}

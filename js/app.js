@@ -416,6 +416,21 @@ applyTranslations();
 buildLangMenu();
 show("s-intro");
 
+// ===================== 화면에 꽉 차게 자동 맞춤 =====================
+// 고정 디자인(1340x800)을 기기 화면에 비율 유지하며 최대로 확대/축소 (스크롤 없음)
+function fitScreen() {
+  const el = document.getElementById("appScale");
+  if (!el) return;
+  const DW = 1340, DH = 800;
+  const s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+  const x = (window.innerWidth - DW * s) / 2;
+  const y = (window.innerHeight - DH * s) / 2;
+  el.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
+}
+window.addEventListener("resize", fitScreen);
+window.addEventListener("orientationchange", fitScreen);
+fitScreen();
+
 // ===================== PWA 서비스 워커 등록 =====================
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
