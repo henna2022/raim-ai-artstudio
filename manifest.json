@@ -1,0 +1,17 @@
+{
+  "name": "AI 그림 연구소",
+  "short_name": "그림 연구소",
+  "description": "라이미와 함께 AI로 나만의 그림을 만들어요",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#eaf2ff",
+  "theme_color": "#7ea8ff",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

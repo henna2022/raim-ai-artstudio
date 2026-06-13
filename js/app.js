@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js?v=6";
+import { I18N, LANGS } from "./i18n.js?v=8";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -179,7 +179,14 @@ function answerQuiz(choice) {
 function goHome() {
   picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = []; show("s-home");
 }
+// 맨 처음 화면(인트로)으로 완전 초기화
+function resetToStart() {
+  picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = [];
+  currentImageUrl = null; stopGenAnim();
+  show("s-intro");
+}
 document.getElementById("homeBtn").onclick = goHome;
+document.getElementById("resetBtn").onclick = resetToStart;
 document.getElementById("introStart").onclick = () => show("s-home");
 
 // ===================== 모드 선택 =====================
@@ -408,3 +415,10 @@ document.getElementById("chatFinish").onclick = async () => {
 applyTranslations();
 buildLangMenu();
 show("s-intro");
+
+// ===================== PWA 서비스 워커 등록 =====================
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
