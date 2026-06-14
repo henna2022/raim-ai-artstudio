@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js?v=8";
+import { I18N, LANGS } from "./i18n.js?v=10";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -344,9 +344,19 @@ function renderResult(url) {
 }
 
 // ===================== 채팅 플로우 =====================
+const MAX_CHAT_TURNS = 8; // 질의응답 최대 횟수 (이후 자동으로 그림 생성)
+let chatBusy = false;      // 요청 중 중복 전송 방지
+function userTurnCount() { return chatMessages.filter(m => m.role === "user").length; }
+function setChatEnabled(on) {
+  ["chatInput", "chatSend", "chatFinish"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = !on;
+  });
+}
 function startChat() {
   chatMessages = [{ role: "assistant", content: t("chatGreeting") }];
+  chatBusy = false;
   renderChat();
+  setChatEnabled(true);
 }
 function renderChat(loading) {
   const sc = document.getElementById("chatScroll"); sc.innerHTML = "";
@@ -369,26 +379,36 @@ function renderChat(loading) {
   sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" });
 }
 async function sendChat() {
+  if (chatBusy) return;
+  if (userTurnCount() >= MAX_CHAT_TURNS) return; // 이미 한도 도달
   const inp = document.getElementById("chatInput");
   const text = inp.value.trim(); if (!text) return;
   inp.value = "";
   chatMessages.push({ role: "user", content: text });
   renderChat(true);
+  chatBusy = true; setChatEnabled(false);
   try {
     const reply = await apiChat(chatMessages.filter(m => m.role !== "system"));
     chatMessages.push({ role: "assistant", content: reply });
   } catch (e) {
     chatMessages.push({ role: "assistant", content: t("chatError") });
   }
+  chatBusy = false;
   renderChat(false);
+  // 질의응답 8번을 채우면 입력을 막고 자동으로 그림 생성
+  if (userTurnCount() >= MAX_CHAT_TURNS) {
+    setChatEnabled(false);
+    await new Promise(r => setTimeout(r, 800));
+    finishChat(true);
+  } else {
+    setChatEnabled(true);
+  }
 }
-document.getElementById("chatSend").onclick = sendChat;
-document.getElementById("chatInput").addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendChat(); }
-});
-document.getElementById("chatFinish").onclick = async () => {
+async function finishChat(autoForced) {
+  if (chatBusy) return;
+  chatBusy = true; setChatEnabled(false);
   // 1) 라이미가 마무리 인사 (프롬프트는 절대 보여주지 않음)
-  chatMessages.push({ role: "assistant", content: t("chatFinishMsg") });
+  chatMessages.push({ role: "assistant", content: t(autoForced ? "chatAutoFinishMsg" : "chatFinishMsg") });
   renderChat(false);
   await new Promise(r => setTimeout(r, 900)); // 인사를 잠깐 보여준 뒤
   show("s-gen");
@@ -405,8 +425,16 @@ document.getElementById("chatFinish").onclick = async () => {
     chatMessages.push({ role: "assistant", content: t("chatFailMsg") });
     show("s-chat");
     renderChat(false);
+    setChatEnabled(true);
+  } finally {
+    chatBusy = false;
   }
-};
+}
+document.getElementById("chatSend").onclick = sendChat;
+document.getElementById("chatInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendChat(); }
+});
+document.getElementById("chatFinish").onclick = () => finishChat(false);
 
 // ===================== 초기화 =====================
 ["introHero", "cardChatImg", "genPainter"].forEach(id => {

@@ -41,6 +41,7 @@ export const I18N = {
       "안녕하세요! 저는 그림 친구 라이미예요 \n오늘 어떤 그림을 만들고 싶어요? 동물, 로봇, 우주... 뭐든 좋아요! 떠오르는 걸 말해주세요",
     chatError: "앗, 잠깐 문제가 생겼어요. 다시 한 번 말해줄래요?",
     chatFinishMsg: "알겠어요! 이제 그림을 그려줄게요!",
+    chatAutoFinishMsg: "우리 이야기 정말 많이 했어요! 이제 멋진 그림을 만들어줄게요 🎨",
     chatFailMsg: "앗, 그림 만들기에 실패했어요 ㅠㅠ 잠시 뒤에 버튼을 한 번 더 눌러줄래요?",
 
     // 생성중
@@ -177,6 +178,7 @@ export const I18N = {
       "Hi! I'm Raimi, your drawing AI buddy \nWhat picture would you like to make today? Animals, robots, space... anything! Tell me what comes to mind :D",
     chatError: "Oops, something went wrong. Could you say that again?",
     chatFinishMsg: "Got it! Let me draw it for you now!",
+    chatAutoFinishMsg: "We talked so much! Now let me make your picture 🎨",
     chatFailMsg: "Oops, I couldn't make the picture ㅠㅠ Could you tap the button once more in a moment?",
 
     genText: "Drawing your picture...",
