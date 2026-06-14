@@ -9,7 +9,7 @@ export const maxDuration = 60;
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능해요.' });
   try {
-    const { prompt } = req.body || {};
+    const { prompt, mode } = req.body || {};
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: '그림 설명이 필요해요.' });
     }
@@ -53,6 +53,7 @@ export default async function handler(req, res) {
         prompt: safePrompt,
         n: 1,
         size: '1024x1024',
+        quality: 'low',
       }),
     });
     const data = await r.json();
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
 
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
 
-    await logGeneration();
+    await logGeneration(mode);
     await cleanupOld();
     return res.status(200).json({ url: pub.publicUrl });
   } catch (e) {
@@ -76,8 +77,9 @@ export default async function handler(req, res) {
   }
 }
 
-async function logGeneration() {
-  try { await supabase.from('generations').insert({}); } catch (e) {}
+async function logGeneration(mode) {
+  const m = (mode === 'blocks' || mode === 'chat') ? mode : null;
+  try { await supabase.from('generations').insert({ mode: m }); } catch (e) {}
 }
 async function cleanupOld() {
   try {

@@ -198,10 +198,10 @@ document.querySelectorAll(".bigCard").forEach(b => {
 });
 
 // ===================== API 호출 =====================
-async function apiGenerate(prompt) {
+async function apiGenerate(prompt, mode) {
   const r = await fetch(API_BASE + "/api/generate", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ prompt, mode })
   });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "생성 실패"); }
   return (await r.json()).url;
@@ -289,7 +289,7 @@ async function runGenerate(prompt) {
   lastPrompt = prompt;
   show("s-gen");
   try {
-    const url = await apiGenerate(prompt);
+    const url = await apiGenerate(prompt, "blocks");
     renderResult(url); // 리뷰 단계 없이 바로 결과(이미지+QR) 화면으로
   } catch (e) {
     renderReview(null, e.message); // 실패 시에만 리뷰 화면(에러+다시 시도)
@@ -418,7 +418,7 @@ async function finishChat(autoForced) {
       { role: "user", content: "Based on what we talked about, describe the picture to draw in one detailed English paragraph. Output only the description sentences and nothing else." }
     ]);
     const desc = await apiChat(summaryMsgs, "describe");
-    const url = await apiGenerate(desc);
+    const url = await apiGenerate(desc, "chat");
     // 3) 곧바로 완성(QR) 화면으로
     renderResult(url);
   } catch (e) {
@@ -436,13 +436,56 @@ document.getElementById("chatInput").addEventListener("keydown", e => {
 });
 document.getElementById("chatFinish").onclick = () => finishChat(false);
 
+// ===================== 관리자 통계 (URL에 ?admin 또는 #admin) =====================
+function isAdminMode() {
+  return /\badmin\b/.test(location.search) || location.hash.replace("#", "") === "admin";
+}
+async function showAdmin() {
+  const el = document.getElementById("s-admin");
+  el.innerHTML = '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
+    '<p class="adminMsg">불러오는 중...</p></div>';
+  show("s-admin");
+  try {
+    const r = await fetch(API_BASE + "/api/stats");
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.error || "통계를 불러오지 못했어요.");
+    renderAdmin(s);
+  } catch (e) {
+    const msg = el.querySelector(".adminMsg");
+    if (msg) msg.textContent = "오류: " + e.message;
+  }
+}
+function renderAdmin(s) {
+  const el = document.getElementById("s-admin");
+  const daily = (s.daily || []).slice(0, 14);
+  const maxDay = Math.max(1, ...daily.map(d => d.count));
+  const dailyRows = daily.map(d =>
+    '<div class="adminBarRow"><span class="adminBarDay">' + d.day + '</span>' +
+    '<span class="adminBar" style="width:' + Math.round((d.count / maxDay) * 100) + '%"></span>' +
+    '<span class="adminBarNum">' + d.count + '</span></div>'
+  ).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
+  el.innerHTML =
+    '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
+    '<div class="adminCards">' +
+      '<div class="adminCard"><div class="adminNum">' + (s.today ?? 0) + '</div><div class="adminLbl">오늘</div></div>' +
+      '<div class="adminCard"><div class="adminNum">' + (s.total ?? 0) + '</div><div class="adminLbl">누적 전체</div></div>' +
+      '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.blocks) || 0) + '</div><div class="adminLbl">블록</div></div>' +
+      '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.chat) || 0) + '</div><div class="adminLbl">대화</div></div>' +
+    '</div>' +
+    '<h3 class="adminH3">최근 날짜별 (한국시간)</h3>' +
+    '<div class="adminDaily">' + dailyRows + '</div>' +
+    '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button></div>';
+  const rb = document.getElementById("adminRefresh");
+  if (rb) rb.onclick = showAdmin;
+}
+
 // ===================== 초기화 =====================
 ["introHero", "cardChatImg", "genPainter"].forEach(id => {
   const el = document.getElementById(id); if (el) raimiFallback(el);
 });
 applyTranslations();
 buildLangMenu();
-show("s-intro");
+if (isAdminMode()) showAdmin(); else show("s-intro");
 
 // ===================== 화면에 꽉 차게 자동 맞춤 =====================
 // 고정 디자인(1340x800)을 기기 화면에 비율 유지하며 최대로 확대/축소 (스크롤 없음)
