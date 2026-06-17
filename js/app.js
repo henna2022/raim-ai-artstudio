@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js?v=12";
+import { I18N } from "./i18n.js?v=12";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -69,27 +69,16 @@ function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
-  // 언어 버튼은 항상 '한국어/ENG'로 표기 (메뉴에서 한국어/English 선택)
-  document.getElementById("langCurrent").textContent = "한국어/ENG";
+  // 토글 버튼: 누르면 전환될 '반대' 언어를 표시 (한국어면 ENG, 영어면 한국어)
+  document.getElementById("langCurrent").textContent = lang === "ko" ? "ENG" : "한국어";
 }
 
-// ===================== 언어 전환 =====================
-function buildLangMenu() {
-  const menu = document.getElementById("langMenu"); menu.innerHTML = "";
-  LANGS.forEach(l => {
-    const b = document.createElement("button");
-    b.className = "langOpt" + (l.code === lang ? " active" : "");
-    b.textContent = l.label;
-    b.onclick = () => { setLang(l.code); menu.classList.remove("open"); };
-    menu.appendChild(b);
-  });
-}
+// ===================== 언어 전환 (토글) =====================
 function setLang(code) {
   if (!I18N[code]) return;
   lang = code;
   localStorage.setItem("raimi-lang", code);
   applyTranslations();
-  buildLangMenu();
   // 현재 화면을 다시 그려서 번역을 반영
   if (currentScreen === "s-blocks") renderBlockStep();
   else if (currentScreen === "s-review") renderReview(lastReview.url, lastReview.err);
@@ -100,11 +89,8 @@ function setLang(code) {
   }
   else if (currentScreen === "s-gen") startQuiz();
 }
-document.getElementById("langBtn").onclick = (e) => {
-  e.stopPropagation();
-  document.getElementById("langMenu").classList.toggle("open");
-};
-document.addEventListener("click", () => document.getElementById("langMenu").classList.remove("open"));
+// 한국어 ↔ 영어 토글
+document.getElementById("langBtn").onclick = () => setLang(lang === "ko" ? "en" : "ko");
 
 // ===================== 화면 전환 =====================
 function show(id) {
@@ -484,7 +470,6 @@ function renderAdmin(s) {
   const el = document.getElementById(id); if (el) raimiFallback(el);
 });
 applyTranslations();
-buildLangMenu();
 if (isAdminMode()) showAdmin(); else show("s-intro");
 
 // ===================== 화면에 꽉 차게 자동 맞춤 =====================
