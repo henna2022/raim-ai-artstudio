@@ -1,4 +1,4 @@
-import { I18N, LANGS } from "./i18n.js?v=10";
+import { I18N, LANGS } from "./i18n.js?v=12";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -69,8 +69,8 @@ function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
-  // 언어 버튼은 항상 'LANG'으로 표기 (메뉴에서 한국어/English 선택)
-  document.getElementById("langCurrent").textContent = "LANG";
+  // 언어 버튼은 항상 '한국어/ENG'로 표기 (메뉴에서 한국어/English 선택)
+  document.getElementById("langCurrent").textContent = "한국어/ENG";
 }
 
 // ===================== 언어 전환 =====================
@@ -111,7 +111,7 @@ function show(id) {
   currentScreen = id;
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
   document.getElementById(id).classList.add("on");
-  document.getElementById("homeBtn").style.display = (id === "s-home" || id === "s-intro") ? "none" : "block";
+  document.getElementById("homeBtn").style.display = (id === "s-intro") ? "none" : "block";
   window.scrollTo(0, 0);
   if (id === "s-gen") { startQuiz(); startGenAnim(); }
   else stopGenAnim();
@@ -185,8 +185,8 @@ function resetToStart() {
   currentImageUrl = null; stopGenAnim();
   show("s-intro");
 }
-document.getElementById("homeBtn").onclick = goHome;
-document.getElementById("resetBtn").onclick = resetToStart;
+// '처음으로' = 맨 처음(라이미 소개) 화면으로 완전 초기화
+document.getElementById("homeBtn").onclick = resetToStart;
 document.getElementById("introStart").onclick = () => show("s-home");
 
 // ===================== 모드 선택 =====================
