@@ -43,6 +43,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ total, today, byMode: { blocks, chat }, daily });
   } catch (e) {
-    return res.status(500).json({ error: e.message || '통계를 불러오지 못했어요.' });
+    const code = e && e.code;
+    let msg = (e && (e.message || e.details)) || '통계를 불러오지 못했어요.';
+    // generations 테이블이 없을 때(42P01) 명확한 안내
+    if (code === '42P01' || /does not exist|relation .* does not/i.test(msg)) {
+      msg = "‘generations’ 테이블이 없어요. Supabase SQL Editor에서 테이블을 먼저 만들어 주세요.";
+    }
+    return res.status(500).json({ error: msg, code: code || null });
   }
 }
