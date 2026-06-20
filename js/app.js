@@ -441,15 +441,38 @@ async function showAdmin() {
     if (msg) msg.textContent = "오류: " + e.message;
   }
 }
-function renderAdmin(s) {
-  const el = document.getElementById("s-admin");
-  const daily = (s.daily || []).slice(0, 14);
-  const maxDay = Math.max(1, ...daily.map(d => d.count));
-  const dailyRows = daily.map(d =>
-    '<div class="adminBarRow"><span class="adminBarDay">' + d.day + '</span>' +
-    '<span class="adminBar" style="width:' + Math.round((d.count / maxDay) * 100) + '%"></span>' +
+let adminStats = null;
+let adminPeriod = "daily";
+const ADMIN_TABS = [
+  { id: "daily", tab: "일별", title: "일별 생성 수 (한국시간)" },
+  { id: "weekly", tab: "주별", title: "주별 생성 수 (한국시간)" },
+  { id: "monthly", tab: "월별", title: "월별 생성 수 (한국시간)" },
+];
+function adminChartHTML() {
+  const data = (adminStats && adminStats[adminPeriod]) || [];
+  const max = Math.max(1, ...data.map(d => d.count));
+  return data.map(d =>
+    '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
+    '<span class="adminBar" style="width:' + Math.round((d.count / max) * 100) + '%"></span>' +
     '<span class="adminBarNum">' + d.count + '</span></div>'
   ).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
+}
+function syncAdmin() {
+  const meta = ADMIN_TABS.find(t => t.id === adminPeriod) || ADMIN_TABS[0];
+  const title = document.getElementById("adminChartTitle");
+  if (title) title.textContent = meta.title;
+  const chart = document.getElementById("adminChart");
+  if (chart) chart.innerHTML = adminChartHTML();
+  document.querySelectorAll(".adminTab").forEach(b =>
+    b.classList.toggle("active", b.dataset.period === adminPeriod));
+}
+function renderAdmin(s) {
+  adminStats = s;
+  const el = document.getElementById("s-admin");
+  const tabs = ADMIN_TABS.map(t =>
+    '<button class="adminTab' + (t.id === adminPeriod ? ' active' : '') +
+    '" data-period="' + t.id + '">' + t.tab + '</button>'
+  ).join("");
   el.innerHTML =
     '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
     '<div class="adminCards">' +
@@ -458,11 +481,15 @@ function renderAdmin(s) {
       '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.blocks) || 0) + '</div><div class="adminLbl">블록</div></div>' +
       '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.chat) || 0) + '</div><div class="adminLbl">대화</div></div>' +
     '</div>' +
-    '<h3 class="adminH3">최근 날짜별 (한국시간)</h3>' +
-    '<div class="adminDaily">' + dailyRows + '</div>' +
+    '<div class="adminTabs">' + tabs + '</div>' +
+    '<h3 class="adminH3" id="adminChartTitle"></h3>' +
+    '<div class="adminDaily" id="adminChart"></div>' +
     '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button></div>';
+  el.querySelectorAll(".adminTab").forEach(b =>
+    b.onclick = () => { adminPeriod = b.dataset.period; syncAdmin(); });
   const rb = document.getElementById("adminRefresh");
   if (rb) rb.onclick = showAdmin;
+  syncAdmin();
 }
 
 // ===================== 초기화 =====================
