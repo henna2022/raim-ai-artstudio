@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     if (!b64) return res.status(502).json({ error: '이미지 데이터를 받지 못했어요.' });
     const buffer = Buffer.from(b64, 'base64');
 
-    // 우측 상단에 서울라임 로고 합성 (합성 실패 시 원본 그대로 업로드)
+    // 우측 하단에 서울라임 로고 합성 (합성 실패 시 원본 그대로 업로드)
     let outBuffer = buffer;
     try {
       outBuffer = await addLogo(buffer);

@@ -1,4 +1,4 @@
-// 생성된 그림 우측 상단에 서울라임 흰색 로고를 작게 합성한다.
+// 생성된 그림 우측 하단에 서울라임 흰색 로고를 작게 합성한다.
 // 흰 로고가 밝은 파스텔 배경에서도 보이도록 뒤에 부드러운 다크 글로우(외곽 광)를 깐다.
 import sharp from 'sharp';
 import { readFile } from 'node:fs/promises';
@@ -9,6 +9,7 @@ export async function addLogo(imageBuffer) {
   const base = sharp(imageBuffer);
   const meta = await base.metadata();
   const W = meta.width || 1024;
+  const H = meta.height || 1024;
 
   // 로고를 그림 너비의 약 15% 폭으로 축소
   const logoRaw = await readFile(LOGO_URL);
@@ -21,7 +22,7 @@ export async function addLogo(imageBuffer) {
   const blurSigma = Math.max(2, Math.round(targetW * 0.06));
   const margin = Math.max(Math.round(W * 0.028), pad + 2); // 모서리 여백(글로우가 잘리지 않게)
   const left0 = W - lw - margin;
-  const top0 = margin;
+  const top0 = H - lh - margin;
 
   // 글로우: 로고에 투명 여백을 더해 블러 → RGB를 검정으로, 알파를 낮춰 부드러운 그림자처럼
   const padded = await sharp(logo)
