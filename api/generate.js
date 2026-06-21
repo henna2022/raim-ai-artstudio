@@ -1,5 +1,6 @@
-// 이미지 생성: OpenAI(GPT Image) → Supabase 저장 → 공개 URL 반환 + 통계 기록
+// 이미지 생성: OpenAI(GPT Image) → 로고 합성 → Supabase 저장 → 공개 URL 반환 + 통계 기록
 import { createClient } from '@supabase/supabase-js';
+import { addLogo } from './_watermark.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const BUCKET = process.env.SUPABASE_BUCKET || 'artworks';
@@ -63,8 +64,16 @@ export default async function handler(req, res) {
     if (!b64) return res.status(502).json({ error: '이미지 데이터를 받지 못했어요.' });
     const buffer = Buffer.from(b64, 'base64');
 
+    // 우측 상단에 서울라임 로고 합성 (합성 실패 시 원본 그대로 업로드)
+    let outBuffer = buffer;
+    try {
+      outBuffer = await addLogo(buffer);
+    } catch (e) {
+      console.error('로고 합성 실패, 원본 업로드:', e?.message || e);
+    }
+
     const filename = `art-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, buffer, { contentType: 'image/png' });
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, outBuffer, { contentType: 'image/png' });
     if (upErr) return res.status(500).json({ error: '저장에 실패했어요: ' + upErr.message });
 
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
