@@ -1,4 +1,4 @@
-import { I18N } from "./i18n.js?v=12";
+import { I18N } from "./i18n.js?v=13";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -167,12 +167,34 @@ function goHome() {
 }
 // 맨 처음 화면(인트로)으로 완전 초기화
 function resetToStart() {
+  closeConfirm();
   picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = [];
   currentImageUrl = null; stopGenAnim();
   show("s-intro");
 }
-// '처음으로' = 맨 처음(라이미 소개) 화면으로 완전 초기화
-document.getElementById("homeBtn").onclick = resetToStart;
+
+// ===================== '처음으로' 확인 모달 =====================
+// 진행 중(블록 선택·대화·그림 생성)일 때 처음으로를 누르면 한 번 확인
+const CONFIRM_SCREENS = ["s-blocks", "s-chat", "s-gen"];
+function openConfirm() {
+  const m = document.getElementById("confirmModal");
+  m.classList.add("open"); m.setAttribute("aria-hidden", "false");
+}
+function closeConfirm() {
+  const m = document.getElementById("confirmModal");
+  if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
+}
+function onHomeClick() {
+  if (CONFIRM_SCREENS.includes(currentScreen)) openConfirm(); // 진행 중이면 확인 창
+  else resetToStart();                                        // 아니면 바로 처음으로
+}
+document.getElementById("homeBtn").onclick = onHomeClick;
+document.getElementById("confirmOk").onclick = resetToStart;     // 확인 → 처음으로(모달도 닫힘)
+document.getElementById("confirmCancel").onclick = closeConfirm; // 취소 → 계속 진행
+// 어두운 배경(모달 바깥)을 누르면 취소
+document.getElementById("confirmModal").addEventListener("click", e => {
+  if (e.target.id === "confirmModal") closeConfirm();
+});
 document.getElementById("introStart").onclick = () => show("s-home");
 
 // ===================== 모드 선택 =====================
@@ -520,3 +542,22 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
 }
+
+// ===================== 3분간 터치가 없으면 처음 화면으로 =====================
+const IDLE_MS = 3 * 60 * 1000; // 3분
+let idleTimer = null;
+function onIdle() {
+  // 이미 처음 화면이거나 그림 생성 중·관리자 화면이면 초기화하지 말고 다시 대기
+  if (currentScreen === "s-intro" || currentScreen === "s-gen" || isAdminMode()) {
+    resetIdleTimer();
+    return;
+  }
+  resetToStart(); // 맨 처음(라이미 소개) 화면으로 완전 초기화
+}
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(onIdle, IDLE_MS);
+}
+["pointerdown", "touchstart", "mousedown", "keydown"].forEach(ev =>
+  window.addEventListener(ev, resetIdleTimer, { passive: true }));
+resetIdleTimer();

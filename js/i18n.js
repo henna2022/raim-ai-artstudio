@@ -13,6 +13,9 @@ export const I18N = {
     appTitle: "AI 그림 연구소",
     appSub: "나만의 그림을 만들어봐요!",
     homeBtn: "🏠 처음으로",
+    confirmHome: "여태까지 만든 게 모두 사라져요.\n정말 처음으로 돌아갈까요?",
+    confirmCancel: "아니요",
+    confirmOk: "네, 처음으로",
 
     // 인트로
     introHi: "안녕하세요! 저는 그림 친구 라이미예요",
@@ -152,6 +155,9 @@ export const I18N = {
     appTitle: "AI Art Lab",
     appSub: "Let's make your very own picture!",
     homeBtn: "🏠 Home",
+    confirmHome: "Everything you've made so far will be lost.\nGo back to the start?",
+    confirmCancel: "No",
+    confirmOk: "Yes, start over",
 
     introHi: "Hi! I'm Raimi, your drawing AI buddy",
     introTitle: "Let's make a picture together with Raimi!",
