@@ -1,9 +1,10 @@
-// 이미지 생성: OpenAI(GPT Image) → 로고 합성 → Supabase 저장 → 공개 URL 반환 + 통계 기록
+// 이미지 생성: OpenAI(GPT Image) → 로고 합성 → WebP 변환 → 저장(R2 설정 시 R2, 아니면 Supabase) → 공개 URL 반환 + 통계 기록
 import { createClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 import { addLogo } from './_watermark.js';
+import { uploadPublic, cleanupOld } from './_storage.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-const BUCKET = process.env.SUPABASE_BUCKET || 'artworks';
 
 export const maxDuration = 60;
 
@@ -72,15 +73,20 @@ export default async function handler(req, res) {
       console.error('로고 합성 실패, 원본 업로드:', e?.message || e);
     }
 
-    const filename = `art-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, outBuffer, { contentType: 'image/png' });
-    if (upErr) return res.status(500).json({ error: '저장에 실패했어요: ' + upErr.message });
+    // 저장 용량 절감: 업로드 직전 WebP(품질 80)로 변환 (PNG 대비 약 70~80% 감소)
+    const webp = await sharp(outBuffer).webp({ quality: 80 }).toBuffer();
 
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    const filename = `art-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+    let url;
+    try {
+      url = await uploadPublic(filename, webp, 'image/webp');
+    } catch (e) {
+      return res.status(500).json({ error: '저장에 실패했어요: ' + (e?.message || e) });
+    }
 
     await logGeneration(mode);
-    await cleanupOld();
-    return res.status(200).json({ url: pub.publicUrl });
+    await cleanupOld(Date.now() - 5 * 60 * 60 * 1000);
+    return res.status(200).json({ url });
   } catch (e) {
     return res.status(500).json({ error: e.message || '알 수 없는 오류' });
   }
@@ -89,12 +95,4 @@ export default async function handler(req, res) {
 async function logGeneration(mode) {
   const m = (mode === 'blocks' || mode === 'chat') ? mode : null;
   try { await supabase.from('generations').insert({ mode: m }); } catch (e) {}
-}
-async function cleanupOld() {
-  try {
-    const cutoff = Date.now() - 5 * 60 * 60 * 1000;
-    const { data: files } = await supabase.storage.from(BUCKET).list('', { limit: 1000 });
-    const old = (files || []).filter((f) => f.created_at && new Date(f.created_at).getTime() < cutoff).map((f) => f.name);
-    if (old.length) await supabase.storage.from(BUCKET).remove(old);
-  } catch (e) {}
 }
