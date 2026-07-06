@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="690" viewBox="0 0 680 690" role="img" font-family="-apple-system, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans KR', sans-serif">
+<title>라이미의 AI 그림 연구소 화면 흐름도</title>
+<desc>Screen flow: intro to home mode picker, blocks/chat creation, generating, result with QR. Includes review on failure, global reset, admin stats entry.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahd" d="M2 1L8 5L2 9" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrowret" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahdr" d="M2 1L8 5L2 9" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<filter id="shLight" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="#1B4B8A" flood-opacity="0.12"/></filter>
+<filter id="shDark" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.38"/></filter>
+</defs>
+<style>
+.th{font-size:14px;font-weight:500}
+.ts{font-size:12px;font-weight:400}
+.hd1{font-size:16px;font-weight:500}
+.hd2{font-size:12px;font-weight:400;letter-spacing:.06em}
+.lbl{font-size:12px;font-weight:400}
+.bn{font-size:12px;font-weight:500}
+.card{stroke-width:1}.mode{stroke-width:1}.prim{stroke-width:1}.slate{stroke-width:1}
+.admin{stroke-width:1.2;stroke-dasharray:5 4}
+.note{stroke-width:1;stroke-dasharray:5 4}
+.arr{stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ret{stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:5 4}
+.badge{stroke-width:1.5}
+.bg{fill:#F5F9FE}
+.hd1{fill:#16365C}
+.hd2{fill:#5B7591}
+.n-t{fill:#16365C}
+.n-s{fill:#5B7591}
+.b-t{fill:#1B4B8A}
+.b-s{fill:#3E6BA0}
+.p-t{fill:#FFFFFF}
+.p-s{fill:#DCEBFB}
+.s-t{fill:#46617F}
+.s-s{fill:#6B819B}
+.card{fill:#FFFFFF;stroke:#D3E2F1}
+.mode{fill:#EAF3FC;stroke:#B7D4F1}
+.prim{fill:#3B7DD8;stroke:#2E6BC4}
+.slate{fill:#EDF1F6;stroke:#CAD6E4}
+.admin{fill:#FFFFFF;stroke:#B7D4F1}
+.note{fill:#F0F6FD;stroke:#C6DCF3}
+.arr{stroke:#7FA9D8}
+.ret{stroke:#A8C6E8}
+.lbl{fill:#5B7591}
+.badge{fill:#FFFFFF;stroke:#3B7DD8}
+.bn{fill:#1B4B8A}
+.ahd{stroke:#7FA9D8}
+.ahdr{stroke:#A8C6E8}
+.sh{filter:url(#shLight)}
+@media (prefers-color-scheme:dark){
+  .bg{fill:#0E1B2E}
+  .hd1{fill:#EAF2FC}
+  .hd2{fill:#8FA6C4}
+  .n-t{fill:#EAF2FC}
+  .n-s{fill:#93A8C6}
+  .b-t{fill:#CFE3FB}
+  .b-s{fill:#8DB2E0}
+  .p-t{fill:#FFFFFF}
+  .p-s{fill:#D4E6FD}
+  .s-t{fill:#AEBED6}
+  .s-s{fill:#8698B2}
+  .card{fill:#17273E;stroke:#2E486B}
+  .mode{fill:#173355;stroke:#37619A}
+  .prim{fill:#3B82F6;stroke:#5A97F8}
+  .slate{fill:#1E2C40;stroke:#3A5274}
+  .admin{fill:#142234;stroke:#37619A}
+  .note{fill:#132339;stroke:#345A88}
+  .arr{stroke:#5E86BE}
+  .ret{stroke:#4E76A4}
+  .lbl{fill:#8FA6C4}
+  .badge{fill:#17273E;stroke:#4A90E8}
+  .bn{fill:#A9CCF3}
+  .ahd{stroke:#5E86BE}
+  .ahdr{stroke:#4E76A4}
+  .sh{filter:url(#shDark)}
+}
+</style>
+<rect class="bg" x="0" y="0" width="680" height="690"/>
+<text class="hd1" x="340" y="28" text-anchor="middle">라이미의 AI 그림 연구소</text>
+<text class="hd2" x="340" y="46" text-anchor="middle">화면 구성도 · screen flow</text>
+<line class="arr" x1="300" y1="90" x2="300" y2="108" marker-end="url(#arrow)"/>
+<path class="arr" d="M385,73 L545,73 L545,108" marker-end="url(#arrow)"/>
+<text class="lbl" x="465" y="66" text-anchor="middle">?admin</text>
+<line class="arr" x1="300" y1="164" x2="300" y2="202" marker-end="url(#arrow)"/>
+<path class="arr" d="M300,258 L300,276 L155,276 L155,296" marker-end="url(#arrow)"/>
+<path class="arr" d="M300,276 L445,276 L445,296" marker-end="url(#arrow)"/>
+<path class="arr" d="M155,352 L155,372 L290,372 L290,392" marker-end="url(#arrow)"/>
+<path class="arr" d="M445,352 L445,372 L310,372 L310,392" marker-end="url(#arrow)"/>
+<line class="arr" x1="300" y1="448" x2="300" y2="488" marker-end="url(#arrow)"/>
+<text class="lbl" x="314" y="472" text-anchor="start">성공</text>
+<line class="arr" x1="400" y1="412" x2="455" y2="412" marker-end="url(#arrow)"/>
+<text class="lbl" x="427" y="405" text-anchor="middle">실패</text>
+<line class="arr" x1="455" y1="432" x2="400" y2="432" marker-end="url(#arrow)"/>
+<text class="lbl" x="427" y="447" text-anchor="middle">재시도</text>
+<path class="ret" d="M200,516 L30,516 L30,230 L200,230" marker-end="url(#arrowret)"/>
+<text class="lbl" x="112" y="508" text-anchor="middle">다시 만들기</text>
+<rect class="prim sh" x="215" y="56" width="170" height="34" rx="17"/>
+<text class="th p-t" x="300" y="73" text-anchor="middle" dominant-baseline="central">앱 실행 (URL 로드)</text>
+<rect class="card sh" x="200" y="108" width="200" height="56" rx="10"/>
+<text class="th n-t" x="300" y="129" text-anchor="middle" dominant-baseline="central">인트로</text>
+<text class="ts n-s" x="300" y="147" text-anchor="middle" dominant-baseline="central">라이미 소개 · 시작</text>
+<rect class="admin" x="455" y="108" width="180" height="56" rx="10"/>
+<text class="th n-t" x="545" y="129" text-anchor="middle" dominant-baseline="central">관리자 통계</text>
+<text class="ts n-s" x="545" y="147" text-anchor="middle" dominant-baseline="central">생성 통계 · 엑셀 저장</text>
+<rect class="card sh" x="200" y="202" width="200" height="56" rx="10"/>
+<text class="th n-t" x="300" y="223" text-anchor="middle" dominant-baseline="central">홈 · 모드 선택</text>
+<text class="ts n-s" x="300" y="241" text-anchor="middle" dominant-baseline="central">블록 / 대화 선택</text>
+<rect class="mode sh" x="55" y="296" width="200" height="56" rx="10"/>
+<text class="th b-t" x="155" y="317" text-anchor="middle" dominant-baseline="central">블록으로 만들기</text>
+<text class="ts b-s" x="155" y="335" text-anchor="middle" dominant-baseline="central">질문 10~15단계 선택</text>
+<rect class="mode sh" x="345" y="296" width="200" height="56" rx="10"/>
+<text class="th b-t" x="445" y="317" text-anchor="middle" dominant-baseline="central">대화하며 만들기</text>
+<text class="ts b-s" x="445" y="335" text-anchor="middle" dominant-baseline="central">라이미와 대화 · 최대 8턴</text>
+<rect class="card sh" x="200" y="392" width="200" height="56" rx="10"/>
+<text class="th n-t" x="300" y="413" text-anchor="middle" dominant-baseline="central">그림 생성 중</text>
+<text class="ts n-s" x="300" y="431" text-anchor="middle" dominant-baseline="central">그리기 + O/X 퀴즈</text>
+<rect class="slate sh" x="455" y="392" width="180" height="56" rx="10"/>
+<text class="th s-t" x="545" y="413" text-anchor="middle" dominant-baseline="central">리뷰</text>
+<text class="ts s-s" x="545" y="431" text-anchor="middle" dominant-baseline="central">생성 실패 · 다시 시도</text>
+<rect class="prim sh" x="200" y="488" width="200" height="56" rx="10"/>
+<text class="th p-t" x="300" y="509" text-anchor="middle" dominant-baseline="central">완성 · 결과</text>
+<text class="ts p-s" x="300" y="527" text-anchor="middle" dominant-baseline="central">이미지 + QR 코드</text>
+<circle class="badge" cx="200" cy="108" r="11"/><text class="bn" x="200" y="108" text-anchor="middle" dominant-baseline="central">1</text>
+<circle class="badge" cx="200" cy="202" r="11"/><text class="bn" x="200" y="202" text-anchor="middle" dominant-baseline="central">2</text>
+<circle class="badge" cx="55" cy="296" r="11"/><text class="bn" x="55" y="296" text-anchor="middle" dominant-baseline="central">3</text>
+<circle class="badge" cx="345" cy="296" r="11"/><text class="bn" x="345" y="296" text-anchor="middle" dominant-baseline="central">3</text>
+<circle class="badge" cx="200" cy="392" r="11"/><text class="bn" x="200" y="392" text-anchor="middle" dominant-baseline="central">4</text>
+<circle class="badge" cx="200" cy="488" r="11"/><text class="bn" x="200" y="488" text-anchor="middle" dominant-baseline="central">5</text>
+<rect class="note" x="55" y="580" width="580" height="64" rx="10"/>
+<text class="th n-t" x="345" y="598" text-anchor="middle" dominant-baseline="central">전역 동작</text>
+<text class="ts n-s" x="345" y="616" text-anchor="middle" dominant-baseline="central">‘처음으로’ · 3분 무입력 → 인트로 초기화 (진행 중이면 확인 창)</text>
+<text class="ts n-s" x="345" y="634" text-anchor="middle" dominant-baseline="central">언어 한/영 토글 · 관리자 통계는 ?admin 으로 진입</text>
+<rect class="card" x="116" y="658" width="14" height="14" rx="3"/><text class="ts n-s" x="136" y="665" text-anchor="start" dominant-baseline="central">일반 화면</text>
+<rect class="mode" x="228" y="658" width="14" height="14" rx="3"/><text class="ts n-s" x="248" y="665" text-anchor="start" dominant-baseline="central">창작 모드</text>
+<rect class="prim" x="340" y="658" width="14" height="14" rx="3"/><text class="ts n-s" x="360" y="665" text-anchor="start" dominant-baseline="central">시작 · 완성</text>
+<rect class="slate" x="452" y="658" width="14" height="14" rx="3"/><text class="ts n-s" x="472" y="665" text-anchor="start" dominant-baseline="central">오류 처리</text>
+</svg>
