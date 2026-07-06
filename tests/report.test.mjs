@@ -4,7 +4,7 @@
 // (12개월 개요 시트 자체는 M7로 재정착했지만) 구조가 달라져 이 파일 전체를 재작성했다.
 // R1(buildSnapshotSheets 2케이스)만 T0 그대로 유지 — 스냅샷 기능은 T3와 무관.
 import assert from 'node:assert/strict';
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth } from '../js/report.js';
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildInsights } from '../js/report.js';
 
 let failures = 0;
 function test(name, fn) {
@@ -155,24 +155,26 @@ test('M1 defaultReportMonth', () => {
   assert.equal(defaultReportMonth([], '2026-07-06'), null);
 
   // buildMonthlyReportSheets 3번째 인자 생략 시 위 규칙으로 동작(D6)
+  // T4: '핵심 요약'이 sheets[0]으로 삽입되어 '요약(...)'은 sheets[1]로 밀림(시트 인덱스 참조만 갱신)
   const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06');
-  assert.equal(sheets[0].name, '요약(2026.06)');
+  assert.equal(sheets[1].name, '요약(2026.06)');
 });
 
 // ---- M2. 시트 구성·이름 ----
+// T4: '핵심 요약'이 맨 앞에 삽입되어 시트 이름 목록·개수가 바뀜(허용된 갱신 범위)
 test('M2 시트 구성·이름', () => {
   const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06', '2026-06');
   assert.deepEqual(
     sheets.map((s) => s.name),
-    ['요약(2026.06)', '일별', '요일별', '시간대별', '12개월 개요', '모드별', '이용 퍼널'],
+    ['핵심 요약', '요약(2026.06)', '일별', '요일별', '시간대별', '12개월 개요', '모드별', '이용 퍼널'],
   );
 });
 
-test('M2 funnel 없는 stats → 6개, 이용 퍼널 없음, 오류 없음(D7)', () => {
+test('M2 funnel 없는 stats → 7개, 이용 퍼널 없음, 오류 없음(D7)', () => {
   const noFunnel = { ...STATS_F };
   delete noFunnel.funnel;
   const sheets = buildMonthlyReportSheets(noFunnel, '2026-07-06', '2026-06');
-  assert.equal(sheets.length, 6);
+  assert.equal(sheets.length, 7);
   assert.ok(!sheets.some((s) => s.name === '이용 퍼널'));
 });
 
@@ -313,7 +315,7 @@ test('M10 갭 — target이 report에 없는 달(2026-05)', () => {
 
 test('M10 완전 빈 stats — targetMonth 생략(default null), 예외 없음', () => {
   const sheets = buildMonthlyReportSheets({ report: [], dailyFull: [] }, '2026-07-06');
-  assert.equal(sheets.length, 6); // funnel 없음
+  assert.equal(sheets.length, 7); // funnel 없음 (T4: '핵심 요약' 삽입으로 6→7, 시트 인덱스/개수 참조 갱신)
   const sum = summarySheet(sheets);
   assert.equal(val(sum, '총 생성'), 0);
   assert.equal(val(sum, '전월 대비(%)'), '—');
@@ -334,6 +336,92 @@ test('M11 시트 간 총계 정합(2026-06) — 요약=일별합=모드별합계
   assert.equal(dailySum, 45);
   assert.equal(modeTotal, 45);
   assert.equal(overviewTotal, 45);
+});
+
+// =====================================================================
+// buildInsights(stats, targetMonth, nowMonth) + '핵심 요약' 시트 — T4
+// =====================================================================
+
+// ---- 기본 동작: 최다/최저 월 · 최다 요일 · 피크 시간대 (target 2026-06, STATS_F) ----
+test('T4 buildInsights 기본 — 최다/최저 월·최다 요일·피크 시간대', () => {
+  const insights = buildInsights(STATS_F, '2026-06', '2026-07');
+  assert.deepEqual(insights, [
+    '최다 생성 달: 2026.04(50건)',
+    '최저 생성 달: 2025.06(30건)',
+    '최다 생성 요일: 토요일(평균 10건)',
+    '피크 시간대: 14시(30건)',
+  ]);
+  // 2026-06의 직전 배열 항목은 2026-04(5월 갭) → 전월 대비 문장 없음, blocks+chat=total → 미분류 문장 없음
+});
+
+// ---- 미분류 안내 문구 (target 2026-04, STATS_F: blocks25+chat20≠total50) ----
+test('T4 buildInsights — 미분류 안내 문구', () => {
+  const insights = buildInsights(STATS_F, '2026-04', '2026-07');
+  assert.ok(insights.includes('모드 미기록 5건 포함(전체의 10%)'));
+});
+
+// ---- ±10% 정확 경계: 정확히 10%도 "증가/감소" 언급에 포함(D2 아님, T4 결정) ----
+test('T4 buildInsights — 전월 대비 ±10% 정확 경계', () => {
+  const rf = (month, total) => ({ month, monthLabel: month.replace('-', '.'), total, blocks: 0, chat: 0, weekday: [], hourly: [] });
+
+  // 정확히 +10% → "증가" 언급 (미만이 아니라 이상 — 정확 경계 포함)
+  const up10 = { report: [rf('2026-05', 100), rf('2026-06', 110)] };
+  assert.ok(buildInsights(up10, '2026-06', '2026-07').includes('직전월 대비 증가(+10%)'));
+
+  // 정확히 -10% → "감소" 언급
+  const down10 = { report: [rf('2026-05', 100), rf('2026-06', 90)] };
+  assert.ok(buildInsights(down10, '2026-06', '2026-07').includes('직전월 대비 감소(-10%)'));
+
+  // 9% (미만) → "비슷한 수준" (증가/감소 언급 없음) — 경계 대조군
+  const up9 = { report: [rf('2026-05', 100), rf('2026-06', 109)] };
+  const insightsUp9 = buildInsights(up9, '2026-06', '2026-07');
+  assert.ok(insightsUp9.includes('직전월과 비슷한 수준'));
+  assert.ok(!insightsUp9.some((line) => line.includes('증가') || line.includes('감소')));
+});
+
+// ---- 동률: 완결월 중 최다가 동률이면 최근 것 ----
+test('T4 buildInsights — 최다 월 동률이면 최근 것', () => {
+  const rf = (month, total) => ({ month, monthLabel: month.replace('-', '.'), total, blocks: 0, chat: 0, weekday: [], hourly: [] });
+  // 2026-04·2026-05 둘 다 total 50으로 동률(최다), 2026-06(20)이 최저
+  const stats = { report: [rf('2026-04', 50), rf('2026-05', 50), rf('2026-06', 20)] };
+  const insights = buildInsights(stats, '2026-06', '2026-07');
+  assert.ok(insights.includes('최다 생성 달: 2026.05(50건)')); // 동률 중 더 최근인 05
+  assert.ok(insights.includes('최저 생성 달: 2026.06(20건)'));
+});
+
+// ---- 2개월 미만: 비교 문장 전부 생략 + '데이터 누적 중' 한 줄만 ----
+test('T4 buildInsights — 데이터 2개월 미만이면 데이터 누적 중만', () => {
+  const rf = (month, total) => ({ month, monthLabel: month.replace('-', '.'), total, blocks: 0, chat: 0, weekday: [], hourly: [] });
+  assert.deepEqual(buildInsights({ report: [rf('2026-07', 9)] }, '2026-07', '2026-07'), ['데이터 누적 중']);
+  assert.deepEqual(buildInsights({ report: [] }, null, '2026-07'), ['데이터 누적 중']);
+});
+
+// ---- 인접 시간대 병합: 상위 2개 시간대가 인접하면 "14~15시" 형태로 병합 ----
+test('T4 buildInsights — 인접 시간대 병합(14~15시)', () => {
+  const hourly = Array.from({ length: 24 }, (_, h) => ({ label: String(h).padStart(2, '0') + '시', count: 0, share: 0 }));
+  hourly[14] = { label: '14시', count: 10, share: 56 };
+  hourly[15] = { label: '15시', count: 8, share: 44 };
+  const rf = (month, total, extra) => ({ month, monthLabel: month.replace('-', '.'), total, blocks: 0, chat: 0, weekday: [], hourly: [], ...extra });
+  const stats = { report: [rf('2026-05', 3), rf('2026-06', 18, { hourly })] };
+  const insights = buildInsights(stats, '2026-06', '2026-07');
+  assert.ok(insights.includes('피크 시간대: 14~15시(10건)'));
+});
+
+// ---- '핵심 요약' 시트 — sheets[0], 생성 시각(stampText 주입)·데이터 범위 포함 ----
+test('T4 핵심 요약 시트 — sheets[0], 생성 시각/데이터 범위', () => {
+  const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06', '2026-06', '2026-07-06 12:00');
+  assert.equal(sheets[0].name, '핵심 요약');
+  const rows = sheets[0].rows;
+  assert.deepEqual(rows[0], ['항목', '내용']);
+  assert.ok(rows.some((r) => r[1] === '최다 생성 달: 2026.04(50건)'));
+  assert.deepEqual(rows.find((r) => r[0] === '생성 시각'), ['생성 시각', '2026-07-06 12:00 (KST)']);
+  assert.deepEqual(rows.find((r) => r[0] === '데이터 범위'), ['데이터 범위', '2025.06 ~ 2026.07']);
+});
+
+test('T4 핵심 요약 시트 — stampText 없으면 생성 시각 행 생략(Date 접근 없음 확인)', () => {
+  const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06', '2026-06');
+  const rows = sheets[0].rows;
+  assert.ok(!rows.some((r) => r[0] === '생성 시각'));
 });
 
 console.log(failures ? `\n${failures}개 테스트 실패` : '\n모든 테스트 통과');

@@ -1,6 +1,11 @@
 // 관리자 엑셀 레포트 빌더 (순수 함수 — DOM·Date/현재시각 접근 금지, 브라우저/Node 겸용)
 // js/app.js의 exportAdminXlsx/exportMonthlyReport가 만들던 sheets 배열 조립 로직을 그대로 옮김.
 
+// buildInsights 임계값 — 하드코딩 산재 금지, 전부 여기 모아둔다.
+const MOM_THRESHOLD_PCT = 10;            // 직전월 대비 "증가/감소" 언급 최소 절대값(%). 정확히 10도 포함(이상).
+const WEEKDAY_AVG_DIFF_THRESHOLD = 0.5;  // 최다 요일 1위-2위 avg 차이 최소값. 미만이면 언급 생략.
+const MIN_MONTHS_FOR_COMPARISON = 2;     // report 전체 개월 수가 이 미만이면 비교 문장 전부 생략.
+
 function seriesRows(arr, head) {
   return [[head, "생성 수"]].concat((arr || []).map((d) => [d.label, d.count]));
 }
@@ -73,10 +78,85 @@ export function defaultReportMonth(report, nowYmd) {
   return list[list.length - 1].month; // 완결월 없음 → 진행 중인 달
 }
 
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// '핵심 요약' 시트용 규칙 기반 코멘트 — 데이터에서만 생성(추측·수식어·원인 해석 금지).
+// nowMonth는 "완결월" 판정에만 쓰는 문자열 값이라 Date 접근이 아니다(호출부인
+// buildMonthlyReportSheets가 nowYmd에서 이미 뽑아 넘겨준다).
+export function buildInsights(stats, targetMonth, nowMonth) {
+  const s = stats || {};
+  const report = s.report || [];
+  if (report.length < MIN_MONTHS_FOR_COMPARISON) return ["데이터 누적 중"];
+
+  const insights = [];
+  const completed = report.filter((m) => m.month !== nowMonth);
+
+  // 최다/최저 월 (완결월 중, 동률이면 최근 것 — 오름차순 순회 + >=/<= 로 뒤쪽이 이김)
+  if (completed.length) {
+    let maxM = completed[0], minM = completed[0];
+    for (const m of completed) {
+      if (m.total >= maxM.total) maxM = m;
+      if (m.total <= minM.total) minM = m;
+    }
+    insights.push(`최다 생성 달: ${maxM.monthLabel}(${maxM.total}건)`);
+    insights.push(`최저 생성 달: ${minM.monthLabel}(${minM.total}건)`);
+  }
+
+  // 직전월 대비 (완결월 기준만 — 대상 월이 진행 중이면 생략)
+  const targetEntry = report.find((m) => m.month === targetMonth);
+  if (targetEntry && targetMonth !== nowMonth) {
+    const idx = report.findIndex((m) => m.month === targetMonth);
+    const prevEntry = idx > 0 ? report[idx - 1] : null;
+    if (prevEntry && prevEntry.month === prevMonthKey(targetMonth) && prevEntry.total !== 0) {
+      const pct = Math.round(((targetEntry.total - prevEntry.total) / prevEntry.total) * 100);
+      if (Math.abs(pct) >= MOM_THRESHOLD_PCT) {
+        insights.push(`직전월 대비 ${pct > 0 ? "증가" : "감소"}(${pct > 0 ? "+" : ""}${pct}%)`);
+      } else {
+        insights.push("직전월과 비슷한 수준");
+      }
+    }
+  }
+
+  // 최다 요일 (대상 월의 weekday avg 1위. 1위-2위 차이가 임계값 미만이면 언급 생략)
+  if (targetEntry && targetEntry.weekday && targetEntry.weekday.length) {
+    const sorted = targetEntry.weekday.slice().sort((a, b) => b.avg - a.avg);
+    const top = sorted[0], second = sorted[1];
+    if (top && top.avg > 0 && (!second || top.avg - second.avg >= WEEKDAY_AVG_DIFF_THRESHOLD)) {
+      insights.push(`최다 생성 요일: ${top.label}요일(평균 ${top.avg}건)`);
+    }
+  }
+
+  // 피크 시간대 (대상 월의 hourly 1위. 상위 2개가 인접하면 "14~15시" 형태로 병합)
+  if (targetEntry && targetEntry.hourly && targetEntry.hourly.length) {
+    const sorted = targetEntry.hourly.map((h, i) => ({ ...h, hour: i })).sort((a, b) => b.count - a.count);
+    const top = sorted[0];
+    if (top && top.count > 0) {
+      const second = sorted[1];
+      let label = top.label;
+      if (second && second.count > 0 && Math.abs(second.hour - top.hour) === 1) {
+        const lo = Math.min(top.hour, second.hour), hi = Math.max(top.hour, second.hour);
+        label = `${pad2(lo)}~${pad2(hi)}시`;
+      }
+      insights.push(`피크 시간대: ${label}(${top.count}건)`);
+    }
+  }
+
+  // 미분류 안내
+  if (targetEntry) {
+    const etc = Math.max(0, targetEntry.total - targetEntry.blocks - targetEntry.chat);
+    if (etc > 0) {
+      const pct = targetEntry.total ? Math.round((etc / targetEntry.total) * 100) : 0;
+      insights.push(`모드 미기록 ${etc}건 포함(전체의 ${pct}%)`);
+    }
+  }
+
+  return insights;
+}
+
 // 월간 보고서(.xlsx) 시트 배열 — 대상 월(targetMonth) 하나를 골라 그 달의 상세(일별·요일·시간대·
 // 모드·퍼널) + 12개월 개요를 함께 담는다. targetMonth 생략/null이면 defaultReportMonth로 결정(D6).
 // target이 report에 없는 달(갭)이거나 report가 비어 있어도 예외를 던지지 않고 0/'—'로 채운다(D4).
-export function buildMonthlyReportSheets(stats, nowYmd, targetMonth) {
+export function buildMonthlyReportSheets(stats, nowYmd, targetMonth, stampText) {
   const s = stats || {};
   const report = s.report || [];
   const target = (targetMonth === undefined || targetMonth === null)
@@ -86,6 +166,12 @@ export function buildMonthlyReportSheets(stats, nowYmd, targetMonth) {
   const partial = target !== null && target === nowMonth;
   const idx = report.findIndex((m) => m.month === target);
   const entry = idx >= 0 ? report[idx] : undefined;
+
+  // 핵심 요약 — buildInsights의 규칙 기반 코멘트 + 생성 시각(주입된 stampText) + 데이터 범위
+  const insightRows = [["항목", "내용"]]
+    .concat(buildInsights(s, target, nowMonth).map((line, i) => [`코멘트 ${i + 1}`, line]));
+  if (stampText) insightRows.push(["생성 시각", stampText + " (KST)"]);
+  if (report.length) insightRows.push(["데이터 범위", `${report[0].monthLabel} ~ ${report[report.length - 1].monthLabel}`]);
 
   // ① 요약(YYYY.MM) — 대상 월의 총계·전월 대비(숫자)·전년 동월·모드·가동일·최다 생성일
   const total = entry ? entry.total : 0;
@@ -159,6 +245,7 @@ export function buildMonthlyReportSheets(stats, nowYmd, targetMonth) {
   modeRows.push(["합계", total, "100%"]);
 
   const sheets = [
+    { name: "핵심 요약", rows: insightRows },
     { name: `요약(${ymLabel(target)})`, rows: summaryRows },
     { name: "일별", rows: trendRows },
     { name: "요일별", rows: weekdayRows },

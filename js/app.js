@@ -1,6 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth } from "./report.js?v=3";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth } from "./report.js?v=4";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -587,7 +587,7 @@ function exportMonthlyReport() {
   const rm = document.getElementById("reportMonth");
   const targetMonth = (rm && rm.value) || defaultReportMonth(adminStats.report || [], kstYmd());
   if (!targetMonth) return; // 표시할 달이 없음(report 비어 있음)
-  downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth));
+  downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth, kstStamp()));
 }
 
 // ===================== 초기화 =====================
