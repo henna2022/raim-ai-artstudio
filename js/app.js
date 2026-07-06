@@ -1,4 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
+import { downloadXlsx } from "./xlsx-mini.js?v=2";
+import { buildSnapshotSheets, buildMonthlyReportSheets } from "./report.js?v=1";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -469,6 +471,8 @@ const ADMIN_TABS = [
   { id: "daily", tab: "일별", title: "일별 생성 수 (한국시간)" },
   { id: "weekly", tab: "주별", title: "주별 생성 수 (한국시간)" },
   { id: "monthly", tab: "월별", title: "월별 생성 수 (한국시간)" },
+  { id: "weekday", tab: "요일별", title: "요일별 생성 수 (한국시간)" },
+  { id: "hourly", tab: "시간대별", title: "시간대별 생성 수 (한국시간)" },
 ];
 function adminChartHTML() {
   const data = (adminStats && adminStats[adminPeriod]) || [];
@@ -495,23 +499,52 @@ function renderAdmin(s) {
     '<button class="adminTab' + (t.id === adminPeriod ? ' active' : '') +
     '" data-period="' + t.id + '">' + t.tab + '</button>'
   ).join("");
+  const card = (n, l) => '<div class="adminCard"><div class="adminNum">' + (n ?? 0) + '</div><div class="adminLbl">' + l + '</div></div>';
   el.innerHTML =
     '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
     '<div class="adminCards">' +
-      '<div class="adminCard"><div class="adminNum">' + (s.today ?? 0) + '</div><div class="adminLbl">오늘</div></div>' +
-      '<div class="adminCard"><div class="adminNum">' + (s.total ?? 0) + '</div><div class="adminLbl">누적 전체</div></div>' +
-      '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.blocks) || 0) + '</div><div class="adminLbl">블록</div></div>' +
-      '<div class="adminCard"><div class="adminNum">' + ((s.byMode && s.byMode.chat) || 0) + '</div><div class="adminLbl">대화</div></div>' +
+      card(s.today, "오늘") + card(s.thisWeek, "이번 주") + card(s.thisMonth, "이번 달") +
     '</div>' +
     '<div class="adminTabs">' + tabs + '</div>' +
     '<h3 class="adminH3" id="adminChartTitle"></h3>' +
     '<div class="adminDaily" id="adminChart"></div>' +
-    '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button></div>';
+    '<div class="adminBtns">' +
+      '<button class="actionBtn excel" id="adminReport">📄 월별 레포트</button>' +
+      '<button class="actionBtn excelAlt" id="adminExport">📊 통계 내보내기</button>' +
+      '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button>' +
+    '</div></div>';
   el.querySelectorAll(".adminTab").forEach(b =>
     b.onclick = () => { adminPeriod = b.dataset.period; syncAdmin(); });
   const rb = document.getElementById("adminRefresh");
   if (rb) rb.onclick = showAdmin;
+  const xb = document.getElementById("adminExport");
+  if (xb) xb.onclick = exportAdminXlsx;
+  const rp = document.getElementById("adminReport");
+  if (rp) rp.onclick = exportMonthlyReport;
   syncAdmin();
+}
+
+// 한국시간 기준 타임스탬프/날짜 (파일명·표시용)
+function kstStamp() {
+  return new Date().toLocaleString("sv-SE", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+}
+function kstYmd() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+
+// 현재 통계 스냅샷을 엑셀로 — 화면에 보이는 기간별 요약 + 일/주/월 표
+function exportAdminXlsx() {
+  if (!adminStats) return;
+  downloadXlsx("라이미-통계_" + kstYmd() + ".xlsx", buildSnapshotSheets(adminStats, kstStamp()));
+}
+
+// 월별 분석 레포트(.xlsx) — 월별 비교·전월대비·요일/시간대/모드 분석
+function exportMonthlyReport() {
+  if (!adminStats) return;
+  downloadXlsx("라이미-월별레포트_" + kstYmd() + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd()));
 }
 
 // ===================== 초기화 =====================

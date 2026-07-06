@@ -1,12 +1,14 @@
 // AI 그림 연구소 PWA 서비스 워커
 // 전략: same-origin GET은 network-first (온라인이면 항상 최신, 오프라인이면 캐시 폴백)
-const CACHE = "raim-cache-v1";
+const CACHE = "raim-cache-v3";
 const CORE = [
   "./",
   "./index.html",
   "./css/styles.css",
   "./js/app.js",
   "./js/i18n.js",
+  "./js/xlsx-mini.js",
+  "./js/report.js",
   "./manifest.json",
   "./assets/seoulraim_logo.png",
   "./assets/raimi.png",
@@ -33,6 +35,7 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return; // API(POST) 등은 그대로 통과
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // 폰트·QR 등 외부 요청은 캐시하지 않음
+  if (url.pathname.startsWith("/api/")) return; // API는 항상 네트워크로(오래된 통계 캐시 방지)
 
   e.respondWith(
     fetch(req)
@@ -41,6 +44,9 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match("./index.html")))
+      .catch(() => caches.match(req).then((r) =>
+        // 페이지 이동만 index.html로 폴백. JS/CSS 등 자산 요청엔 HTML을 돌려주지 않는다
+        // (모듈 요청에 HTML이 오면 정적 import가 깨져 앱 부팅이 실패할 수 있음)
+        r || (req.mode === "navigate" ? caches.match("./index.html") : undefined)))
   );
 });

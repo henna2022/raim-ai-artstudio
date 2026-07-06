@@ -108,6 +108,10 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .actionBtn:active{transform:translateY(0);}
 .actionBtn.primary{background:linear-gradient(160deg,#8fb6ff,#6f97f0);color:#fff;box-shadow:0 7px 0 var(--blueD);}
 .actionBtn.secondary{background:#fff;color:#5a688a;box-shadow:0 6px 0 #cfdcf0;}
+.actionBtn.excel{background:linear-gradient(160deg,#3ec37a,#21a35c);color:#fff;box-shadow:0 7px 0 #178047;}
+.actionBtn.excelAlt{background:linear-gradient(160deg,#8fb6ff,#6f97f0);color:#fff;box-shadow:0 7px 0 var(--blueD);}
+.adminBtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;}
+.adminBtns .actionBtn{font-size:19px;padding:14px 26px;}
 .errBox{background:#ffe2e2;color:#c0392b;padding:20px;border-radius:18px;max-width:380px;margin:0 auto;font-size:18px;text-align:center;}
 
 /* CHAT */

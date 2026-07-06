@@ -1,0 +1,117 @@
+// 생성 통계 집계 (순수 함수: Supabase 등 외부 의존성 없음 → 단위 테스트 가능)
+// 입력 rows: [{ created_at, mode }] (created_at = UTC ISO/ms), 모두 KST(한국시간) 기준으로 집계.
+
+const KST = 9 * 3600 * 1000; // UTC+9
+const DAY = 24 * 3600 * 1000;
+const pad = (n) => String(n).padStart(2, '0');
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+
+// created_at(UTC ms) → KST 달력 기준 Date (UTC getter로 KST 값을 읽음)
+const kst = (ms) => new Date(ms + KST);
+
+// 집계 키 (KST 기준)
+export const dayKey = (ms) => { const d = kst(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+export const monthKey = (ms) => { const d = kst(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`; };
+export const weekKey = (ms) => { // 그 주 월요일(KST) 날짜를 키로
+  const d = kst(ms);
+  const back = (d.getUTCDay() + 6) % 7; // 일=0 → 월요일까지 거슬러 올라갈 일수
+  const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - back * DAY);
+  return `${mon.getUTCFullYear()}-${pad(mon.getUTCMonth() + 1)}-${pad(mon.getUTCDate())}`;
+};
+
+// 표시 라벨
+export const dayLabel = (key) => { const d = new Date(key + 'T00:00:00Z'); return `${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())}(${WD[d.getUTCDay()]})`; };
+export const weekLabel = (key) => {
+  const s = new Date(key + 'T00:00:00Z');
+  const e = new Date(s.getTime() + 6 * DAY);
+  return `${pad(s.getUTCMonth() + 1)}/${pad(s.getUTCDate())}~${pad(e.getUTCMonth() + 1)}/${pad(e.getUTCDate())}`;
+};
+export const monthLabel = (key) => { const [y, m] = key.split('-'); return `${y}.${m}`; };
+
+// 최근 n개 구간만 (최신순) 라벨/카운트로 변환
+const series = (map, n, labelFn) =>
+  Object.keys(map)
+    .sort((a, b) => (a < b ? 1 : -1))
+    .slice(0, n)
+    .map((key) => ({ label: labelFn(key), count: map[key] }));
+
+// nowMs 기준, 정확히 months개 달을 커버하는 조회 시작점(그 달 1일 00:00 KST)의 UTC ISO
+export function windowStartISO(nowMs, months) {
+  const d = kst(nowMs);
+  let y = d.getUTCFullYear(), m = d.getUTCMonth() - (months - 1);
+  while (m < 0) { m += 12; y -= 1; }
+  return new Date(Date.UTC(y, m, 1) - KST).toISOString();
+}
+
+// rows + 기준시각(nowMs) → 대시보드/레포트에 필요한 모든 집계
+export function aggregate(rows, nowMs) {
+  const dMap = {}, wMap = {}, mMap = {};
+  const wdMap = new Array(7).fill(0);   // 0=일 .. 6=토
+  const hrMap = new Array(24).fill(0);  // 0시 .. 23시
+  const monthAgg = {};                  // mk → { total, blocks, chat, dayMap:{dk:count} }
+
+  for (const r of rows || []) {
+    const ms = new Date(r.created_at).getTime();
+    if (!(ms > 0)) continue; // NaN·null(→0)·음수 방어 (null created_at이 1970년으로 집계되는 것 차단)
+    const d = kst(ms);
+    const dk = dayKey(ms), wk = weekKey(ms), mk = monthKey(ms);
+    dMap[dk] = (dMap[dk] || 0) + 1;
+    wMap[wk] = (wMap[wk] || 0) + 1;
+    mMap[mk] = (mMap[mk] || 0) + 1;
+    wdMap[d.getUTCDay()]++;
+    hrMap[d.getUTCHours()]++;
+    const ma = monthAgg[mk] || (monthAgg[mk] = { total: 0, blocks: 0, chat: 0, dayMap: {} });
+    ma.total++;
+    if (r.mode === 'blocks') ma.blocks++;
+    else if (r.mode === 'chat') ma.chat++;
+    ma.dayMap[dk] = (ma.dayMap[dk] || 0) + 1;
+  }
+
+  // 현재 기간 키 (KST)
+  const nowDay = dayKey(nowMs), nowWeek = weekKey(nowMs), nowMonth = monthKey(nowMs);
+  const today = dMap[nowDay] || 0;
+  const thisWeek = wMap[nowWeek] || 0;
+  const thisMonth = mMap[nowMonth] || 0;
+
+  // 요일별 (월요일 시작 표시)
+  const WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
+  const weekday = WD_ORDER.map((d) => ({ label: WD[d], count: wdMap[d] }));
+
+  // 시간대별 (0~23시)
+  const hourly = hrMap.map((c, h) => ({ label: pad(h) + '시', count: c }));
+
+  // 월별 분석 (오름차순 최근 12개월): 전월 대비 증감은 클라이언트/시트에서 인접 월로 계산 가능하도록 total 포함
+  const report = Object.keys(monthAgg).sort().slice(-12).map((mk) => {
+    const ma = monthAgg[mk];
+    const dayKeys = Object.keys(ma.dayMap);
+    const activeDays = dayKeys.length;
+    let peakDate = '', peakCount = 0;
+    for (const dk of dayKeys) if (ma.dayMap[dk] > peakCount) { peakCount = ma.dayMap[dk]; peakDate = dk; }
+    return {
+      month: mk,
+      monthLabel: monthLabel(mk),
+      total: ma.total,
+      blocks: ma.blocks,
+      chat: ma.chat,
+      blocksPct: ma.total ? Math.round((ma.blocks / ma.total) * 100) : 0,
+      activeDays,
+      avgActive: activeDays ? Math.round((ma.total / activeDays) * 10) / 10 : 0,
+      peakLabel: peakDate ? dayLabel(peakDate) : '',
+      peakCount,
+    };
+  });
+
+  // 일별 전체(오름차순) — 레포트의 '일별 추이 + 월 누적'용.
+  // report와 동일한 월 집합으로 제한해 시트 간 총계가 어긋나지 않게 한다.
+  const reportMonths = new Set(report.map((r) => r.month));
+  const dailyFull = Object.keys(dMap).sort()
+    .filter((dk) => reportMonths.has(dk.slice(0, 7)))
+    .map((dk) => ({ date: dk, label: dayLabel(dk), month: dk.slice(0, 7), count: dMap[dk] }));
+
+  // 화면 차트용 최신순 시리즈
+  const daily = series(dMap, 14, dayLabel);
+  const weekly = series(wMap, 12, weekLabel);
+  const monthly = series(mMap, 12, monthLabel);
+
+  return { today, thisWeek, thisMonth, daily, weekly, monthly, weekday, hourly, report, dailyFull };
+}
