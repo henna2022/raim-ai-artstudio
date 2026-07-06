@@ -1,6 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets } from "./report.js?v=2";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth } from "./report.js?v=3";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -531,6 +531,7 @@ function renderAdmin(s) {
     '<h3 class="adminH3" id="adminChartTitle"></h3>' +
     '<div class="adminDaily" id="adminChart"></div>' +
     '<div class="adminBtns">' +
+      '<select class="reportMonthSelect" id="reportMonth"></select>' +
       '<button class="actionBtn excel" id="adminReport">📄 월별 레포트</button>' +
       '<button class="actionBtn excelAlt" id="adminExport">📊 통계 내보내기</button>' +
       '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button>' +
@@ -543,6 +544,23 @@ function renderAdmin(s) {
   if (xb) xb.onclick = exportAdminXlsx;
   const rp = document.getElementById("adminReport");
   if (rp) rp.onclick = exportMonthlyReport;
+
+  // 대상 월 선택: report[]의 월 최신순, 기본값은 defaultReportMonth (가장 최근 완결월)
+  const rm = document.getElementById("reportMonth");
+  if (rm) {
+    const report = s.report || [];
+    const nowMonth = kstYmd().slice(0, 7);
+    if (!report.length) {
+      rm.style.display = "none";
+      if (rp) rp.disabled = true;
+    } else {
+      rm.innerHTML = report.slice().reverse().map((m) =>
+        '<option value="' + m.month + '">' + m.monthLabel + (m.month === nowMonth ? " (진행 중)" : "") + '</option>'
+      ).join("");
+      const def = defaultReportMonth(report, kstYmd());
+      if (def) rm.value = def;
+    }
+  }
   syncAdmin();
 }
 
@@ -563,10 +581,13 @@ function exportAdminXlsx() {
   downloadXlsx("라이미-통계_" + kstYmd() + ".xlsx", buildSnapshotSheets(adminStats, kstStamp()));
 }
 
-// 월별 분석 레포트(.xlsx) — 월별 비교·전월대비·요일/시간대/모드 분석
+// 월간 보고서(.xlsx) — 대상 월(select#reportMonth) 하나를 골라 그 달의 상세 + 12개월 개요
 function exportMonthlyReport() {
   if (!adminStats) return;
-  downloadXlsx("라이미-월별레포트_" + kstYmd() + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd()));
+  const rm = document.getElementById("reportMonth");
+  const targetMonth = (rm && rm.value) || defaultReportMonth(adminStats.report || [], kstYmd());
+  if (!targetMonth) return; // 표시할 달이 없음(report 비어 있음)
+  downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth));
 }
 
 // ===================== 초기화 =====================

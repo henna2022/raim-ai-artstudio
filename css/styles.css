@@ -178,6 +178,7 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .adminTabs{display:inline-flex;gap:6px;background:#eef3ff;border-radius:999px;padding:6px;margin:20px 0 6px;}
 .adminTab{border:0;background:transparent;color:#5a688a;font-size:16px;font-weight:800;padding:8px 22px;border-radius:999px;cursor:pointer;transition:.15s;}
 .adminTab.active{background:#fff;color:#3f6bd6;box-shadow:0 4px 0 rgba(120,150,210,.18);}
+.reportMonthSelect{background:#eef3ff;color:#3f6bd6;font-size:16px;font-weight:800;padding:10px 16px;border:0;border-radius:999px;cursor:pointer;}
 .adminH3{font-size:20px;font-weight:800;color:#4a546e;margin:18px 0 10px;}
 .adminDaily{max-width:560px;margin:0 auto;text-align:left;}
 .adminBarRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;}

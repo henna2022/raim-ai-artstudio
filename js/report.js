@@ -29,65 +29,164 @@ function prevMonthKey(mk) {
   m -= 1; if (m === 0) { m = 12; y -= 1; }
   return y + "-" + String(m).padStart(2, "0");
 }
+// "12개월 개요" 시트용 — 기존 그대로(문자열 "+N%"/"—"/"신규", T5에서 숫자화 예정)
 function momPct(cur, prevEntry, curMonth) {
   if (!prevEntry || prevEntry.month !== prevMonthKey(curMonth)) return "—"; // 직전 달 데이터 없음
   if (prevEntry.total === 0) return cur > 0 ? "신규" : "—";
   const p = Math.round(((cur - prevEntry.total) / prevEntry.total) * 100);
   return (p > 0 ? "+" : "") + p + "%";
 }
+// "요약" 시트용 — 같은 갭 판정 로직이지만 값은 숫자 그대로(부호 문자열 없음, D2)
+function momPctNumber(cur, prevEntry, curMonth) {
+  if (!prevEntry || prevEntry.month !== prevMonthKey(curMonth)) return "—";
+  if (prevEntry.total === 0) return cur > 0 ? "신규" : "—";
+  return Math.round(((cur - prevEntry.total) / prevEntry.total) * 100);
+}
 
-// 월별 분석 레포트(.xlsx) 시트 배열 — 월별 비교·전월대비·요일/시간대/모드 분석
-export function buildMonthlyReportSheets(stats, nowYmd) {
+// 'YYYY-MM' → 'YYYY.MM'. report.js는 api/_aggregate.js에 의존하지 않으므로 로컬로 재구현.
+function ymLabel(mk) {
+  if (!mk) return "";
+  const [y, m] = mk.split("-");
+  return `${y}.${m}`;
+}
+// mk의 전년 동월 키('YYYY-MM' → 1년 전)
+function priorYearKey(mk) {
+  if (!mk) return null;
+  const [y, m] = mk.split("-");
+  return (Number(y) - 1) + "-" + m;
+}
+// mk월의 일수. Date.UTC(y, m, 0)에서 m은 mk의 1-based 월 문자열을 그대로 0-based '다음달' 인자로
+// 써서 그 달 마지막 날을 얻는다(예: mk='2026-07' → Date.UTC(2026,7,0) = 7월 31일).
+function daysInMonth(mk) {
+  const [y, m] = mk.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+// report[]에서 기본 대상 월 결정(D5) — 가장 최근 완결월(진행 중인 달 제외), 완결월이 없으면
+// 진행 중인 달, report가 비어 있으면 null. DOM 없는 순수 함수 — app.js는 호출만 한다.
+export function defaultReportMonth(report, nowYmd) {
+  const list = report || [];
+  if (!list.length) return null;
+  const nowMonth = nowYmd.slice(0, 7);
+  const completed = list.filter((m) => m.month !== nowMonth);
+  if (completed.length) return completed[completed.length - 1].month; // report는 오름차순 → 마지막이 최신 완결월
+  return list[list.length - 1].month; // 완결월 없음 → 진행 중인 달
+}
+
+// 월간 보고서(.xlsx) 시트 배열 — 대상 월(targetMonth) 하나를 골라 그 달의 상세(일별·요일·시간대·
+// 모드·퍼널) + 12개월 개요를 함께 담는다. targetMonth 생략/null이면 defaultReportMonth로 결정(D6).
+// target이 report에 없는 달(갭)이거나 report가 비어 있어도 예외를 던지지 않고 0/'—'로 채운다(D4).
+export function buildMonthlyReportSheets(stats, nowYmd, targetMonth) {
   const s = stats || {};
   const report = s.report || [];
+  const target = (targetMonth === undefined || targetMonth === null)
+    ? defaultReportMonth(report, nowYmd)
+    : targetMonth;
+  const nowMonth = nowYmd.slice(0, 7);
+  const partial = target !== null && target === nowMonth;
+  const idx = report.findIndex((m) => m.month === target);
+  const entry = idx >= 0 ? report[idx] : undefined;
 
-  // 1) 월별 분석 — 진행 중인 달은 표시하되, 전체 달과 비교되지 않도록 표시
-  const nowMonth = nowYmd.slice(0, 7); // 현재 KST 월 (YYYY-MM)
+  // ① 요약(YYYY.MM) — 대상 월의 총계·전월 대비(숫자)·전년 동월·모드·가동일·최다 생성일
+  const total = entry ? entry.total : 0;
+  const blocks = entry ? entry.blocks : 0;
+  const chat = entry ? entry.chat : 0;
+  const etc = Math.max(0, total - blocks - chat);
+  const momVal = partial ? "진행 중" : momPctNumber(total, idx > 0 ? report[idx - 1] : null, target);
+  const pyEntry = report.find((m) => m.month === priorYearKey(target));
+  const priorYearVal = pyEntry ? pyEntry.total : "—";
+
+  const summaryRows = [
+    ["항목", "값"],
+    ["대상 월", ymLabel(target) + (partial ? " (진행 중)" : "")],
+    ["총 생성", total],
+    ["전월 대비(%)", momVal],
+    ["전년 동월 총 생성", priorYearVal],
+    ["블록", blocks],
+    ["대화", chat],
+    ["미분류", etc],
+    ["가동일수", entry ? entry.activeDays : 0],
+    ["가동일 평균", entry ? entry.avgActive : 0],
+    ["최다 생성일", entry && entry.peakLabel ? entry.peakLabel : "—"],
+    ["최다 수", entry ? entry.peakCount : 0],
+  ];
+  if (partial) {
+    // 월말 단순 추정 — 진행 중인 달에만 추가, 라벨에 "단순 추정" 명시(추정치를 라벨 없이 표기 금지)
+    const elapsedDays = Number(nowYmd.slice(8, 10));
+    const estimate = elapsedDays ? Math.round((total / elapsedDays) * daysInMonth(target)) : 0;
+    summaryRows.push(["월말 예상(단순 추정)", estimate]);
+  }
+
+  // ② 일별 — 대상 월만 + 월 누적
+  const trendRows = [["날짜", "생성 수", "월 누적"]];
+  let cum = 0;
+  (s.dailyFull || []).filter((d) => d.month === target).forEach((d) => {
+    cum += d.count;
+    trendRows.push([d.label, d.count, cum]);
+  });
+
+  // ③ 요일별 ④ 시간대별 — 대상 월의 분해(entry.weekday/hourly). top-level 12개월 총합이 아니다.
+  // 예외: target이 null(=report가 통째로 비어 대상 월 자체를 정할 수 없음, D5)일 때는 D4의
+  // "targetMonth가 report에 없는 갭"과 다른 상태이므로 T2 이전 하위 호환을 위해 top-level
+  // s.weekday/s.hourly로 대체한다(report가 있는데 target만 못 찾은 진짜 갭은 계속 헤더만).
+  const weekdaySource = target === null ? (s.weekday || []) : ((entry && entry.weekday) || []);
+  const hourlySource = target === null ? (s.hourly || []) : ((entry && entry.hourly) || []);
+  const weekdayRows = [["요일", "생성 수", "가동일수", "가동일 평균"]]
+    .concat(weekdaySource.map((d) => [d.label, d.count, d.activeDays, d.avg]));
+  const hourlyRows = [["시간대", "생성 수", "비율(%)"]]
+    .concat(hourlySource.map((d) => [d.label, d.count, d.share]));
+
+  // ⑤ 12개월 개요 — 기존 "월별 분석" 표 그대로(문자열 %, momPct) 유지, 시트명만 변경
   const monthRows = [["월", "총 생성", "전월 대비", "블록", "대화", "블록 비율", "가동일수", "가동일 평균", "최다 생성일", "최다 수"]];
   report.forEach((m, i) => {
-    const partial = m.month === nowMonth; // 아직 끝나지 않은 달
+    const p = m.month === nowMonth;
     monthRows.push([
-      m.monthLabel + (partial ? " (진행 중)" : ""), m.total,
-      partial ? "진행 중" : momPct(m.total, report[i - 1], m.month),
+      m.monthLabel + (p ? " (진행 중)" : ""), m.total,
+      p ? "진행 중" : momPct(m.total, report[i - 1], m.month),
       m.blocks, m.chat, m.blocksPct + "%",
       m.activeDays, m.avgActive, m.peakLabel, m.peakCount,
     ]);
   });
 
-  // 2) 일별 추이 (월 누적은 달이 바뀌면 초기화)
-  const trendRows = [["날짜", "생성 수", "월 누적"]];
-  let curMonth = null, cum = 0;
-  (s.dailyFull || []).forEach((d) => {
-    if (d.month !== curMonth) { curMonth = d.month; cum = 0; }
-    cum += d.count;
-    trendRows.push([d.label, d.count, cum]);
-  });
-
-  // 3) 요일별(가동일수·가동일 평균 포함) 4) 시간대별(비율(%) 숫자 셀)
-  const weekdayRows = [["요일", "생성 수", "가동일수", "가동일 평균"]]
-    .concat((s.weekday || []).map((d) => [d.label, d.count, d.activeDays, d.avg]));
-  const hourlyRows = [["시간대", "생성 수", "비율(%)"]]
-    .concat((s.hourly || []).map((d) => [d.label, d.count, d.share]));
-
-  // 5) 모드별 (레포트 기간 합계). 합계는 총 생성 기준 → 일별 추이·월별 분석과 정합.
-  const totBlocks = report.reduce((n, m) => n + m.blocks, 0);
-  const totChat = report.reduce((n, m) => n + m.chat, 0);
-  const totAll = report.reduce((n, m) => n + m.total, 0);
-  const totEtc = Math.max(0, totAll - totBlocks - totChat); // 모드 미기록분
-  const pct = (n) => (totAll ? Math.round((n / totAll) * 100) : 0) + "%";
+  // ⑥ 모드별 — 대상 월 기준(과거처럼 전체 report 합산이 아님)
+  const pctOf = (n) => (total ? Math.round((n / total) * 100) : 0) + "%";
   const modeRows = [
     ["모드", "생성 수", "비율"],
-    ["블록", totBlocks, pct(totBlocks)],
-    ["대화", totChat, pct(totChat)],
+    ["블록", blocks, pctOf(blocks)],
+    ["대화", chat, pctOf(chat)],
   ];
-  if (totEtc > 0) modeRows.push(["미분류", totEtc, pct(totEtc)]);
-  modeRows.push(["합계", totAll, "100%"]);
+  if (etc > 0) modeRows.push(["미분류", etc, pctOf(etc)]);
+  modeRows.push(["합계", total, "100%"]);
 
-  return [
-    { name: "월별 분석", rows: monthRows },
-    { name: "일별 추이", rows: trendRows },
+  const sheets = [
+    { name: `요약(${ymLabel(target)})`, rows: summaryRows },
+    { name: "일별", rows: trendRows },
     { name: "요일별", rows: weekdayRows },
     { name: "시간대별", rows: hourlyRows },
+    { name: "12개월 개요", rows: monthRows },
     { name: "모드별", rows: modeRows },
   ];
+
+  // ⑦ 이용 퍼널 — stats.funnel.monthly에서 target을 조회(D7, 현재 달이어도 top-level 아님).
+  // 해당 월이 없으면 전부 0. stats.funnel 자체가 없으면(T1 SQL 미적용) 시트를 생략(오류 금지).
+  if (s.funnel) {
+    const fEntry = (s.funnel.monthly || []).find((m) => m.month === target) || {
+      visits: 0, modeSelects: 0, ok: 0, blocked: 0, error: 0, blockRate: 0, perSession: 0,
+    };
+    sheets.push({
+      name: "이용 퍼널",
+      rows: [
+        ["항목", "값"],
+        ["방문", fEntry.visits],
+        ["모드 선택", fEntry.modeSelects],
+        ["생성 성공", fEntry.ok],
+        ["차단", fEntry.blocked],
+        ["오류", fEntry.error],
+        ["차단율(%)", fEntry.blockRate],
+        ["세션당 시도", fEntry.perSession],
+      ],
+    });
+  }
+
+  return sheets;
 }

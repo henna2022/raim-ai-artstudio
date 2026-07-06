@@ -60,11 +60,13 @@ export function aggregate(rows, nowMs) {
     mMap[mk] = (mMap[mk] || 0) + 1;
     wdMap[d.getUTCDay()]++;
     hrMap[d.getUTCHours()]++;
-    const ma = monthAgg[mk] || (monthAgg[mk] = { total: 0, blocks: 0, chat: 0, dayMap: {} });
+    const ma = monthAgg[mk] || (monthAgg[mk] = { total: 0, blocks: 0, chat: 0, dayMap: {}, wd: new Array(7).fill(0), hr: new Array(24).fill(0) });
     ma.total++;
     if (r.mode === 'blocks') ma.blocks++;
     else if (r.mode === 'chat') ma.chat++;
     ma.dayMap[dk] = (ma.dayMap[dk] || 0) + 1;
+    ma.wd[d.getUTCDay()]++;
+    ma.hr[d.getUTCHours()]++;
   }
 
   // 현재 기간 키 (KST)
@@ -94,6 +96,17 @@ export function aggregate(rows, nowMs) {
     const activeDays = dayKeys.length;
     let peakDate = '', peakCount = 0;
     for (const dk of dayKeys) if (ma.dayMap[dk] > peakCount) { peakCount = ma.dayMap[dk]; peakDate = dk; }
+
+    // 그 달만의 요일별/시간대별 분해 (T3 — top-level weekday/hourly의 12개월 총합과는 별개)
+    const mWdActiveDays = new Array(7).fill(0);
+    for (const dk of dayKeys) mWdActiveDays[new Date(dk + 'T00:00:00Z').getUTCDay()]++;
+    const mWeekday = WD_ORDER.map((d) => {
+      const count = ma.wd[d], ad = mWdActiveDays[d];
+      return { label: WD[d], count, activeDays: ad, avg: ad ? Math.round((count / ad) * 10) / 10 : 0 };
+    });
+    const mHrTotal = ma.hr.reduce((a, b) => a + b, 0);
+    const mHourly = ma.hr.map((c, h) => ({ label: pad(h) + '시', count: c, share: mHrTotal ? Math.round((c / mHrTotal) * 100) : 0 }));
+
     return {
       month: mk,
       monthLabel: monthLabel(mk),
@@ -105,6 +118,8 @@ export function aggregate(rows, nowMs) {
       avgActive: activeDays ? Math.round((ma.total / activeDays) * 10) / 10 : 0,
       peakLabel: peakDate ? dayLabel(peakDate) : '',
       peakCount,
+      weekday: mWeekday,
+      hourly: mHourly,
     };
   });
 
