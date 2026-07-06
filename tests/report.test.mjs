@@ -244,30 +244,33 @@ test('M6 요일별/시간대별 — entry.weekday/hourly 사용(top-level과 구
   assert.equal(typeof row14[2], 'number'); // 비율(%) 숫자 셀
 });
 
-// ---- M7. 12개월 개요 — 기존 월별 분석 표 그대로 ----
-test('M7 12개월 개요 — 기존 월별 분석 표 그대로(T0 R2·R3 재정착)', () => {
+// ---- M7. 12개월 개요 — 기존 월별 분석 표, T5: 전월 대비·블록 비율 숫자 셀 ----
+test('M7 12개월 개요 — 전월 대비·블록 비율 숫자 셀(T5)', () => {
   const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06', '2026-06');
   const rows = sheetByName(sheets, '12개월 개요').rows;
-  assert.deepEqual(rows[0], ['월', '총 생성', '전월 대비', '블록', '대화', '블록 비율', '가동일수', '가동일 평균', '최다 생성일', '최다 수']);
+  assert.deepEqual(rows[0], ['월', '총 생성', '전월 대비(%)', '블록', '대화', '블록 비율(%)', '가동일수', '가동일 평균', '최다 생성일', '최다 수']);
 
   const byLabel = (label) => rows.find((r) => r[0] === label);
-  assert.equal(byLabel('2026.07 (진행 중)')[2], '진행 중');
-  assert.equal(byLabel('2026.04')[2], '+25%'); // 여기는 문자열 유지(T5에서 변환)
-  assert.equal(byLabel('2026.06')[2], '—'); // 직전 배열 항목이 2026-04 → 5월 갭
-  assert.equal(byLabel('2026.03')[2], '—'); // 직전 배열 항목이 2025-06 → 갭(2026-03이 첫 완결월 아님)
+  assert.equal(byLabel('2026.07 (진행 중)')[2], ''); // 진행 중 → 빈 문자열(라벨의 "(진행 중)"은 유지)
+  assert.equal(byLabel('2026.04')[2], 25); // 숫자 25(문자열 '+25%' 아님, T5)
+  assert.equal(byLabel('2026.06')[2], ''); // 갭(직전 배열 항목 2026-04) → 빈 문자열
+  assert.equal(byLabel('2026.03')[2], ''); // 갭(직전 배열 항목 2025-06) → 빈 문자열
+  assert.equal(typeof byLabel('2026.04')[2], 'number');
+  assert.equal(typeof byLabel('2026.06')[5], 'number'); // 블록 비율(%) 숫자 셀
 });
 
-// ---- M8. 모드별 — 해당 월 기준 ----
-test('M8 모드별 — target 2026-04(미분류 있음)', () => {
+// ---- M8. 모드별 — 해당 월 기준, T5: 비율 숫자 셀 ----
+test('M8 모드별 — target 2026-04(미분류 있음), 비율 숫자 셀(T5)', () => {
   const sheets = buildMonthlyReportSheets(STATS_F, '2026-07-06', '2026-04');
   const rows = sheetByName(sheets, '모드별').rows;
   assert.deepEqual(rows, [
-    ['모드', '생성 수', '비율'],
-    ['블록', 25, '50%'],
-    ['대화', 20, '40%'],
-    ['미분류', 5, '10%'],
-    ['합계', 50, '100%'],
+    ['모드', '생성 수', '비율(%)'],
+    ['블록', 25, 50],
+    ['대화', 20, 40],
+    ['미분류', 5, 10],
+    ['합계', 50, 100],
   ]);
+  rows.slice(1).forEach((r) => assert.equal(typeof r[2], 'number'));
 });
 
 test('M8 모드별 — target 2026-06(blocks+chat=total, 미분류 없음)', () => {
@@ -306,10 +309,10 @@ test('M10 갭 — target이 report에 없는 달(2026-05)', () => {
   assert.equal(sheetByName(sheets, '요일별').rows.length, 1);
   assert.equal(sheetByName(sheets, '시간대별').rows.length, 1);
   assert.deepEqual(sheetByName(sheets, '모드별').rows, [
-    ['모드', '생성 수', '비율'],
-    ['블록', 0, '0%'],
-    ['대화', 0, '0%'],
-    ['합계', 0, '100%'],
+    ['모드', '생성 수', '비율(%)'],
+    ['블록', 0, 0],
+    ['대화', 0, 0],
+    ['합계', 0, 100],
   ]);
 });
 

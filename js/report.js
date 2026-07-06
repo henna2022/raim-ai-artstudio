@@ -34,12 +34,14 @@ function prevMonthKey(mk) {
   m -= 1; if (m === 0) { m = 12; y -= 1; }
   return y + "-" + String(m).padStart(2, "0");
 }
-// "12개월 개요" 시트용 — 기존 그대로(문자열 "+N%"/"—"/"신규", T5에서 숫자화 예정)
-function momPct(cur, prevEntry, curMonth) {
-  if (!prevEntry || prevEntry.month !== prevMonthKey(curMonth)) return "—"; // 직전 달 데이터 없음
-  if (prevEntry.total === 0) return cur > 0 ? "신규" : "—";
-  const p = Math.round(((cur - prevEntry.total) / prevEntry.total) * 100);
-  return (p > 0 ? "+" : "") + p + "%";
+// "12개월 개요" 시트용 — 숫자 또는 빈 문자열(T5). 갭·첫 항목·진행 중·구"신규" 분기를
+// 전부 ''로 통합(후속 계산·피벗을 위해 숫자 셀 유지, "요약" 시트의 momPctNumber와는 별개 — 그쪽은
+// T3(D2)에서 이미 '—'/'신규' 문자열로 확정되어 M3·M4가 그대로 검증 중이라 변경하지 않는다).
+function momPctCell(cur, prevEntry, curMonth, partial) {
+  if (partial) return "";
+  if (!prevEntry || prevEntry.month !== prevMonthKey(curMonth)) return "";
+  if (prevEntry.total === 0) return "";
+  return Math.round(((cur - prevEntry.total) / prevEntry.total) * 100);
 }
 // "요약" 시트용 — 같은 갭 판정 로직이지만 값은 숫자 그대로(부호 문자열 없음, D2)
 function momPctNumber(cur, prevEntry, curMonth) {
@@ -222,27 +224,27 @@ export function buildMonthlyReportSheets(stats, nowYmd, targetMonth, stampText) 
   const hourlyRows = [["시간대", "생성 수", "비율(%)"]]
     .concat(hourlySource.map((d) => [d.label, d.count, d.share]));
 
-  // ⑤ 12개월 개요 — 기존 "월별 분석" 표 그대로(문자열 %, momPct) 유지, 시트명만 변경
-  const monthRows = [["월", "총 생성", "전월 대비", "블록", "대화", "블록 비율", "가동일수", "가동일 평균", "최다 생성일", "최다 수"]];
+  // ⑤ 12개월 개요 — 기존 "월별 분석" 표, 전월 대비·블록 비율은 숫자 셀(T5, 헤더에 (%) 단위 명시)
+  const monthRows = [["월", "총 생성", "전월 대비(%)", "블록", "대화", "블록 비율(%)", "가동일수", "가동일 평균", "최다 생성일", "최다 수"]];
   report.forEach((m, i) => {
     const p = m.month === nowMonth;
     monthRows.push([
       m.monthLabel + (p ? " (진행 중)" : ""), m.total,
-      p ? "진행 중" : momPct(m.total, report[i - 1], m.month),
-      m.blocks, m.chat, m.blocksPct + "%",
+      momPctCell(m.total, report[i - 1], m.month, p),
+      m.blocks, m.chat, m.blocksPct,
       m.activeDays, m.avgActive, m.peakLabel, m.peakCount,
     ]);
   });
 
-  // ⑥ 모드별 — 대상 월 기준(과거처럼 전체 report 합산이 아님)
-  const pctOf = (n) => (total ? Math.round((n / total) * 100) : 0) + "%";
+  // ⑥ 모드별 — 대상 월 기준(과거처럼 전체 report 합산이 아님). 비율은 숫자 셀(T5)
+  const pctOf = (n) => (total ? Math.round((n / total) * 100) : 0);
   const modeRows = [
-    ["모드", "생성 수", "비율"],
+    ["모드", "생성 수", "비율(%)"],
     ["블록", blocks, pctOf(blocks)],
     ["대화", chat, pctOf(chat)],
   ];
   if (etc > 0) modeRows.push(["미분류", etc, pctOf(etc)]);
-  modeRows.push(["합계", total, "100%"]);
+  modeRows.push(["합계", total, 100]);
 
   const sheets = [
     { name: "핵심 요약", rows: insightRows },
@@ -275,5 +277,43 @@ export function buildMonthlyReportSheets(stats, nowYmd, targetMonth, stampText) 
     });
   }
 
+  return sheets;
+}
+
+// ===================== 원본 데이터 내보내기 (T5) =====================
+
+const EXPORT_ROW_CAP = 50000; // 시트당 최대 행수 — 넘으면 최신 것만 남기고 나머지는 안내 행 하나로 대체
+
+// items(오름차순, {t, ...}) → 시트 rows(헤더 제외). EXPORT_ROW_CAP을 넘으면 오래된 것부터 잘라
+// 최신 cap건만 남기고 마지막 행에 "이후 생략 (총 N행)"(N=원본 전체 건수) 안내를 붙인다.
+// 정확히 cap이면 자르지 않는다("넘으면"이므로 경계값 그 자체가 아니라 초과일 때만 발동).
+export function capRows(items, toRow) {
+  const list = items || [];
+  if (list.length <= EXPORT_ROW_CAP) return list.map(toRow);
+  const total = list.length;
+  const kept = list.slice(-EXPORT_ROW_CAP).map(toRow);
+  kept.push([`이후 생략 (총 ${total}행)`]);
+  return kept;
+}
+
+// /api/export 응답({generations, events}) → downloadXlsx용 sheets 배열.
+// events가 없으면(T1 미적용 서버) '이벤트' 시트 자체를 생략(오류 금지) — buildMonthlyReportSheets의
+// 이용 퍼널 시트와 동일한 정책.
+export function buildExportSheets(data) {
+  const d = data || {};
+  const sheets = [
+    {
+      name: "생성기록",
+      rows: [["일시(KST)", "모드"]].concat(capRows(d.generations, (r) => [r.t, r.mode])),
+    },
+  ];
+  if (d.events) {
+    sheets.push({
+      name: "이벤트",
+      rows: [["일시(KST)", "종류", "모드", "언어"]].concat(
+        capRows(d.events, (r) => [r.t, r.type, r.mode, r.lang]),
+      ),
+    });
+  }
   return sheets;
 }

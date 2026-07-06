@@ -28,6 +28,13 @@ export const weekLabel = (key) => {
 };
 export const monthLabel = (key) => { const [y, m] = key.split('-'); return `${y}.${m}`; };
 
+// KST 'YYYY-MM-DD HH:mm' 문자열 (원본 데이터 내보내기용). Date 로케일 함수(toLocaleString 등) 대신
+// 위와 동일한 kst() 시프트 + UTC getter 방식으로 순수 구현 — 타임존 데이터 없이도 결정적으로 동작.
+export const kstDateTime = (ms) => {
+  const d = kst(ms);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+};
+
 // 최근 n개 구간만 (최신순) 라벨/카운트로 변환
 const series = (map, n, labelFn) =>
   Object.keys(map)

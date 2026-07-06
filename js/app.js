@@ -1,6 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth } from "./report.js?v=4";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets } from "./report.js?v=5";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -534,6 +534,7 @@ function renderAdmin(s) {
       '<select class="reportMonthSelect" id="reportMonth"></select>' +
       '<button class="actionBtn excel" id="adminReport">📄 월별 레포트</button>' +
       '<button class="actionBtn excelAlt" id="adminExport">📊 통계 내보내기</button>' +
+      '<button class="actionBtn secondary" id="adminRawExport">🗂 원본 데이터</button>' +
       '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button>' +
     '</div></div>';
   el.querySelectorAll(".adminTab").forEach(b =>
@@ -544,6 +545,8 @@ function renderAdmin(s) {
   if (xb) xb.onclick = exportAdminXlsx;
   const rp = document.getElementById("adminReport");
   if (rp) rp.onclick = exportMonthlyReport;
+  const rawB = document.getElementById("adminRawExport");
+  if (rawB) rawB.onclick = exportRawData;
 
   // 대상 월 선택: report[]의 월 최신순, 기본값은 defaultReportMonth (가장 최근 완결월)
   const rm = document.getElementById("reportMonth");
@@ -588,6 +591,18 @@ function exportMonthlyReport() {
   const targetMonth = (rm && rm.value) || defaultReportMonth(adminStats.report || [], kstYmd());
   if (!targetMonth) return; // 표시할 달이 없음(report 비어 있음)
   downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth, kstStamp()));
+}
+
+// 원본 데이터(.xlsx) — /api/export에서 12개월치 생성기록(+이벤트)을 받아 그대로 시트로
+async function exportRawData() {
+  try {
+    const r = await fetch(API_BASE + "/api/export");
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "원본 데이터를 불러오지 못했어요.");
+    downloadXlsx("라이미-원본_" + kstYmd() + ".xlsx", buildExportSheets(data));
+  } catch (e) {
+    alert("오류: " + e.message); // 관리자 전용 화면(?admin) — 별도 에러 UI 없이 alert로 충분
+  }
 }
 
 // ===================== 초기화 =====================
