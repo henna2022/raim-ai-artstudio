@@ -63,9 +63,11 @@ export function buildMonthlyReportSheets(stats, nowYmd) {
     trendRows.push([d.label, d.count, cum]);
   });
 
-  // 3) 요일별  4) 시간대별
-  const weekdayRows = [["요일", "생성 수"]].concat((s.weekday || []).map((d) => [d.label, d.count]));
-  const hourlyRows = [["시간대", "생성 수"]].concat((s.hourly || []).map((d) => [d.label, d.count]));
+  // 3) 요일별(가동일수·가동일 평균 포함) 4) 시간대별(비율(%) 숫자 셀)
+  const weekdayRows = [["요일", "생성 수", "가동일수", "가동일 평균"]]
+    .concat((s.weekday || []).map((d) => [d.label, d.count, d.activeDays, d.avg]));
+  const hourlyRows = [["시간대", "생성 수", "비율(%)"]]
+    .concat((s.hourly || []).map((d) => [d.label, d.count, d.share]));
 
   // 5) 모드별 (레포트 기간 합계). 합계는 총 생성 기준 → 일별 추이·월별 분석과 정합.
   const totBlocks = report.reduce((n, m) => n + m.blocks, 0);

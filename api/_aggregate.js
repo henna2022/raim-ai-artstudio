@@ -73,12 +73,19 @@ export function aggregate(rows, nowMs) {
   const thisWeek = wMap[nowWeek] || 0;
   const thisMonth = mMap[nowMonth] || 0;
 
-  // 요일별 (월요일 시작 표시)
+  // 요일별 (월요일 시작 표시) — count는 12개월 총합(운영일 편중에 좌우됨).
+  // activeDays·avg(가동일당 평균)는 정규화 지표: 관측 기회가 많은 요일이 무조건 커 보이는 걸 보정.
   const WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
-  const weekday = WD_ORDER.map((d) => ({ label: WD[d], count: wdMap[d] }));
+  const wdActiveDays = new Array(7).fill(0);
+  for (const dk of Object.keys(dMap)) wdActiveDays[new Date(dk + 'T00:00:00Z').getUTCDay()]++;
+  const weekday = WD_ORDER.map((d) => {
+    const count = wdMap[d], activeDays = wdActiveDays[d];
+    return { label: WD[d], count, activeDays, avg: activeDays ? Math.round((count / activeDays) * 10) / 10 : 0 };
+  });
 
-  // 시간대별 (0~23시)
-  const hourly = hrMap.map((c, h) => ({ label: pad(h) + '시', count: c }));
+  // 시간대별 (0~23시) — share: 전체 대비 비율(%), 분모(전체 건수) 0이면 0
+  const hrTotal = hrMap.reduce((a, b) => a + b, 0);
+  const hourly = hrMap.map((c, h) => ({ label: pad(h) + '시', count: c, share: hrTotal ? Math.round((c / hrTotal) * 100) : 0 }));
 
   // 월별 분석 (오름차순 최근 12개월): 전월 대비 증감은 클라이언트/시트에서 인접 월로 계산 가능하도록 total 포함
   const report = Object.keys(monthAgg).sort().slice(-12).map((mk) => {

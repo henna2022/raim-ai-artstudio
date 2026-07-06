@@ -1,6 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets } from "./report.js?v=1";
+import { buildSnapshotSheets, buildMonthlyReportSheets } from "./report.js?v=2";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -494,12 +494,16 @@ const ADMIN_TABS = [
 ];
 function adminChartHTML() {
   const data = (adminStats && adminStats[adminPeriod]) || [];
-  const max = Math.max(1, ...data.map(d => d.count));
-  return data.map(d =>
-    '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
-    '<span class="adminBar" style="width:' + Math.round((d.count / max) * 100) + '%"></span>' +
-    '<span class="adminBarNum">' + d.count + '</span></div>'
-  ).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
+  // 요일 탭만 가동일당 평균(avg) 기준 — 관측 기회가 많은 요일이 무조건 커 보이는 걸 보정
+  const isWeekday = adminPeriod === "weekday";
+  const valueOf = (d) => isWeekday ? d.avg : d.count;
+  const max = Math.max(1, ...data.map(valueOf));
+  return data.map(d => {
+    const numText = isWeekday ? ("평균 " + d.avg + " (총 " + d.count + ")") : String(d.count);
+    return '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
+      '<span class="adminBar" style="width:' + Math.round((valueOf(d) / max) * 100) + '%"></span>' +
+      '<span class="adminBarNum">' + numText + '</span></div>';
+  }).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
 }
 function syncAdmin() {
   const meta = ADMIN_TABS.find(t => t.id === adminPeriod) || ADMIN_TABS[0];
