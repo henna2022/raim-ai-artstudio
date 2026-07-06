@@ -115,3 +115,51 @@ export function aggregate(rows, nowMs) {
 
   return { today, thisWeek, thisMonth, daily, weekly, monthly, weekday, hourly, report, dailyFull };
 }
+
+// ===================== 이용 퍼널 (events 테이블: 방문·모드선택·생성 성공/차단/오류) =====================
+// aggregate()와 별개 함수 — 기존 aggregate() 시그니처/동작을 절대 건드리지 않는다(회귀 위험 0).
+const FUNNEL_TYPES = ['visit', 'mode_select', 'generate_ok', 'generate_blocked', 'generate_error'];
+
+function emptyFunnelCounts() {
+  return { visits: 0, modeSelects: 0, ok: 0, blocked: 0, error: 0 };
+}
+// 시도(ok+blocked+error) 대비 차단율(%), 방문 대비 세션당 시도 수 — 분모 0이면 0(NaN·예외 없음)
+function deriveFunnelRates(c) {
+  const attempts = c.ok + c.blocked + c.error;
+  return {
+    ...c,
+    blockRate: attempts ? Math.round((c.blocked / attempts) * 100) : 0,
+    perSession: c.visits ? Math.round((attempts / c.visits) * 10) / 10 : 0,
+  };
+}
+
+// events + 기준시각(nowMs) → 이번 달 기준 퍼널 + 월별 배열(최근 12개월)
+export function aggregateFunnel(events, nowMs) {
+  const nowMonth = monthKey(nowMs);
+  const monthAgg = {}; // mk → counts
+
+  for (const ev of events || []) {
+    const ms = new Date(ev && ev.created_at).getTime();
+    if (!(ms > 0)) continue; // 잘못된 created_at 방어 (aggregate()와 동일 정책)
+    const type = ev && ev.type;
+    if (!FUNNEL_TYPES.includes(type)) continue; // 알 수 없는/누락된 type은 무시
+
+    const mk = monthKey(ms);
+    const c = monthAgg[mk] || (monthAgg[mk] = emptyFunnelCounts());
+    if (type === 'visit') c.visits++;
+    else if (type === 'mode_select') c.modeSelects++;
+    else if (type === 'generate_ok') c.ok++;
+    else if (type === 'generate_blocked') c.blocked++;
+    else if (type === 'generate_error') c.error++;
+  }
+
+  const monthly = Object.keys(monthAgg).sort().slice(-12).map((mk) => ({
+    month: mk,
+    monthLabel: monthLabel(mk),
+    ...deriveFunnelRates(monthAgg[mk]),
+  }));
+
+  const current = deriveFunnelRates(monthAgg[nowMonth] || emptyFunnelCounts());
+
+  return { ...current, monthly };
+}

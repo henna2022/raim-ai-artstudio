@@ -24,6 +24,7 @@ let quizOrder = [];
 let quizPos = 0;
 let quizScore = 0;
 let genTimer = null;
+let sessionId = crypto.randomUUID(); // 키오스크 "새 방문" 단위 — resetToStart()에서 재발급
 
 // ===================== 번역 도우미 =====================
 function t(key) { return I18N[lang][key]; }
@@ -168,11 +169,27 @@ function goHome() {
   picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = []; show("s-home");
 }
 // 맨 처음 화면(인트로)으로 완전 초기화
+// 유휴 리셋(onIdle)도 실제 초기화 시 이 함수를 거치므로, 세션 재발급 지점은 여기 하나로 충분하다.
 function resetToStart() {
   closeConfirm();
   picks = {}; stepIdx = 0; extraMode = false; selectedTweaks = []; chatMessages = [];
   currentImageUrl = null; stopGenAnim();
+  sessionId = crypto.randomUUID(); // '처음으로' 확정 = 새 방문 단위
   show("s-intro");
+}
+
+// ===================== 이벤트 로깅 (방문·모드선택 — 개인정보 없음) =====================
+// 절대 await로 UI를 막지 않는다: sendBeacon 우선, 실패 시 fetch(keepalive) 폴백. 둘 다 실패해도 무시.
+function logEvent(type, extra) {
+  try {
+    const payload = JSON.stringify({ session_id: sessionId, type, ...extra });
+    const url = API_BASE + "/api/log";
+    if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }))) {
+      return;
+    }
+    fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true })
+      .catch(() => {});
+  } catch (_) { /* 로깅 실패가 UX를 막으면 안 됨 */ }
 }
 
 // ===================== '처음으로' 확인 모달 =====================
@@ -202,6 +219,7 @@ document.getElementById("introStart").onclick = () => show("s-home");
 // ===================== 모드 선택 =====================
 document.querySelectorAll(".bigCard").forEach(b => {
   b.onclick = () => {
+    logEvent("mode_select", { mode: b.dataset.mode, lang });
     if (b.dataset.mode === "blocks") { picks = {}; stepIdx = 0; extraMode = false; renderBlockStep(); show("s-blocks"); }
     else { startChat(); show("s-chat"); }
   };
@@ -211,7 +229,7 @@ document.querySelectorAll(".bigCard").forEach(b => {
 async function apiGenerate(prompt, mode) {
   const r = await fetch(API_BASE + "/api/generate", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, mode })
+    body: JSON.stringify({ prompt, mode, session_id: sessionId, lang })
   });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "생성 실패"); }
   return (await r.json()).url;
@@ -552,7 +570,12 @@ function exportMonthlyReport() {
   const el = document.getElementById(id); if (el) raimiFallback(el);
 });
 applyTranslations();
-if (isAdminMode()) showAdmin(); else show("s-intro");
+if (isAdminMode()) {
+  showAdmin();
+} else {
+  logEvent("visit", { lang }); // 키오스크 방문 1회(관리자 화면 접속은 방문 집계에서 제외)
+  show("s-intro");
+}
 
 // ===================== 화면에 꽉 차게 자동 맞춤 =====================
 // 고정 디자인(1340x800)을 기기 화면에 비율 유지하며 최대로 확대/축소 (스크롤 없음)

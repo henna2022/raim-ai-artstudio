@@ -8,10 +8,20 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 export const maxDuration = 60;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const validSessionId = (v) => (typeof v === 'string' && UUID_RE.test(v)) ? v : null;
+const validLang = (v) => (v === 'ko' || v === 'en') ? v : null;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능해요.' });
+
+  const body = req.body || {};
+  const mode = (body.mode === 'blocks' || body.mode === 'chat') ? body.mode : null;
+  const lang = validLang(body.lang);
+  const session_id = validSessionId(body.session_id);
+
   try {
-    const { prompt, mode } = req.body || {};
+    const { prompt } = body;
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: '그림 설명이 필요해요.' });
     }
@@ -21,6 +31,7 @@ export default async function handler(req, res) {
     const banned = ['누드','나체','섹스','성인','야한','폭력','피','살해','죽이','자살','마약','담배','술','칼',
                     'nude','naked','sex','sexual','nsfw','porn','blood','gore','kill','suicide','drug','weapon','gun','knife'];
     if (banned.some((w) => low.includes(w.toLowerCase()))) {
+      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'banned' });
       return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?' });
     }
 
@@ -40,6 +51,7 @@ export default async function handler(req, res) {
       'blackpink','newjeans',
     ];
     if (copyrighted.some((w) => low.includes(w.toLowerCase()))) {
+      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'copyright' });
       return res.status(400).json({ error: '유명한 캐릭터나 사람은 그릴 수 없어요. 우리만의 새로운 친구를 만들어볼까요? 😊' });
     }
 
@@ -59,10 +71,17 @@ export default async function handler(req, res) {
       }),
     });
     const data = await r.json();
-    if (!r.ok) return res.status(502).json({ error: data?.error?.message || '이미지 생성에 실패했어요.' });
+    if (!r.ok) {
+      const reason = String(data?.error?.message || '이미지 생성 실패').slice(0, 100);
+      await logEvt('generate_error', { mode, lang, session_id, detail: reason });
+      return res.status(502).json({ error: data?.error?.message || '이미지 생성에 실패했어요.' });
+    }
 
     const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) return res.status(502).json({ error: '이미지 데이터를 받지 못했어요.' });
+    if (!b64) {
+      await logEvt('generate_error', { mode, lang, session_id, detail: '이미지 데이터 없음' });
+      return res.status(502).json({ error: '이미지 데이터를 받지 못했어요.' });
+    }
     const buffer = Buffer.from(b64, 'base64');
 
     // 우측 하단에 서울라임 로고 합성 (합성 실패 시 원본 그대로 업로드)
@@ -81,13 +100,18 @@ export default async function handler(req, res) {
     try {
       url = await uploadPublic(filename, webp, 'image/webp');
     } catch (e) {
+      const reason = String(e?.message || e).slice(0, 100);
+      await logEvt('generate_error', { mode, lang, session_id, detail: reason });
       return res.status(500).json({ error: '저장에 실패했어요: ' + (e?.message || e) });
     }
 
-    await logGeneration(mode);
+    await logGeneration(mode); // 기존 generations insert(하위 호환 이중 기록)
+    await logEvt('generate_ok', { mode, lang, session_id });
     await cleanupOld(Date.now() - 5 * 60 * 60 * 1000);
     return res.status(200).json({ url });
   } catch (e) {
+    const reason = String(e?.message || e).slice(0, 100);
+    await logEvt('generate_error', { mode, lang, session_id, detail: reason });
     return res.status(500).json({ error: e.message || '알 수 없는 오류' });
   }
 }
@@ -95,4 +119,17 @@ export default async function handler(req, res) {
 async function logGeneration(mode) {
   const m = (mode === 'blocks' || mode === 'chat') ? mode : null;
   try { await supabase.from('generations').insert({ mode: m }); } catch (e) {}
+}
+
+// 이벤트 로깅(개인정보 없음 — 프롬프트 원문 절대 저장 안 함). 실패해도 생성 흐름을 막지 않는다.
+async function logEvt(type, { mode, lang, session_id, detail } = {}) {
+  try {
+    await supabase.from('events').insert({
+      type,
+      mode: mode ?? null,
+      lang: lang ?? null,
+      session_id: session_id ?? null,
+      detail: detail ?? null,
+    });
+  } catch (e) { /* 로깅 실패가 생성 흐름을 막으면 안 됨 */ }
 }
