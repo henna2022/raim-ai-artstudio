@@ -1,6 +1,6 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets } from "./report.js?v=5";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData } from "./report.js?v=6";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -535,6 +535,7 @@ function renderAdmin(s) {
       '<button class="actionBtn excel" id="adminReport">📄 월별 레포트</button>' +
       '<button class="actionBtn excelAlt" id="adminExport">📊 통계 내보내기</button>' +
       '<button class="actionBtn secondary" id="adminRawExport">🗂 원본 데이터</button>' +
+      '<button class="actionBtn secondary" id="adminPrintReport">🖨 인쇄용 보고서</button>' +
       '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button>' +
     '</div></div>';
   el.querySelectorAll(".adminTab").forEach(b =>
@@ -547,6 +548,8 @@ function renderAdmin(s) {
   if (rp) rp.onclick = exportMonthlyReport;
   const rawB = document.getElementById("adminRawExport");
   if (rawB) rawB.onclick = exportRawData;
+  const ppB = document.getElementById("adminPrintReport");
+  if (ppB) ppB.onclick = () => renderPrintReport();
 
   // 대상 월 선택: report[]의 월 최신순, 기본값은 defaultReportMonth (가장 최근 완결월)
   const rm = document.getElementById("reportMonth");
@@ -603,6 +606,64 @@ async function exportRawData() {
   } catch (e) {
     alert("오류: " + e.message); // 관리자 전용 화면(?admin) — 별도 에러 UI 없이 alert로 충분
   }
+}
+
+// 홈 화면에 설치된 standalone PWA인지(iPad standalone에서는 print가 동작하지 않을 수 있음)
+function isStandalonePWA() {
+  return (typeof navigator !== "undefined" && navigator.standalone === true) ||
+    (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches);
+}
+
+// 요일별/시간대별과 동일한 막대 UI(.adminBarRow 재사용) — 인쇄 보고서 전용, valueOf 기준으로 정규화
+function printBarRows(data, valueOf, numText) {
+  const list = data || [];
+  const max = Math.max(1, ...list.map(valueOf));
+  return list.map((d) =>
+    '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
+    '<span class="adminBar" style="width:' + Math.round((valueOf(d) / max) * 100) + '%"></span>' +
+    '<span class="adminBarNum">' + numText(d) + '</span></div>'
+  ).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
+}
+
+// 인쇄용 보고서(.xlsx 대신 브라우저 인쇄 → PDF 저장). 대상 월 선택(select#reportMonth)·핵심 요약
+// 문장(buildInsights)을 buildPrintReportData로 그대로 재사용 — 새 로직 없음.
+function renderPrintReport(targetMonth) {
+  if (!adminStats) return;
+  const rm = document.getElementById("reportMonth");
+  const tm = targetMonth !== undefined ? targetMonth : ((rm && rm.value) || null);
+  const data = buildPrintReportData(adminStats, kstYmd(), tm);
+  const el = document.getElementById("s-admin");
+
+  if (isStandalonePWA()) {
+    el.innerHTML =
+      '<div class="fadeUp center"><h2 class="reviewH2">🖨 인쇄용 보고서</h2>' +
+      '<p class="adminMsg">데스크톱 브라우저에서 열어 주세요.</p>' +
+      '<div class="adminBtns noPrint"><button class="actionBtn secondary" id="printBack">← 돌아가기</button></div></div>';
+    document.getElementById("printBack").onclick = () => renderAdmin(adminStats);
+    return;
+  }
+
+  const card = (n, l) => '<div class="adminCard"><div class="adminNum">' + (n ?? 0) + '</div><div class="adminLbl">' + l + '</div></div>';
+  el.innerHTML =
+    '<div class="printReport fadeUp">' +
+      '<h2 class="reviewH2">라이미의 AI 그림 연구소 — ' + data.targetLabel + ' 보고서</h2>' +
+      '<p class="printPeriod">데이터 범위: ' + (data.dataRange || "—") + '</p>' +
+      '<div class="adminCards">' +
+        card(data.total, "총 생성") + card(data.activeDays, "가동일수") + card(data.avgActive, "가동일 평균") +
+      '</div>' +
+      '<h3 class="adminH3">월별 추이</h3>' +
+      '<div class="adminDaily">' + printBarRows(data.monthlyTrend, (d) => d.count, (d) => d.count) + '</div>' +
+      '<h3 class="adminH3">요일별(가동일 평균)</h3>' +
+      '<div class="adminDaily">' + printBarRows(data.weekday, (d) => d.avg, (d) => "평균 " + d.avg + " (총 " + d.count + ")") + '</div>' +
+      '<h3 class="adminH3">시간대별</h3>' +
+      '<div class="adminDaily">' + printBarRows(data.hourly, (d) => d.count, (d) => d.count) + '</div>' +
+      '<h3 class="adminH3">핵심 요약</h3>' +
+      '<ul class="printInsights">' + data.insights.map((t) => "<li>" + t + "</li>").join("") + '</ul>' +
+      '<div class="adminBtns noPrint"><button class="actionBtn secondary" id="printBack">← 돌아가기</button></div>' +
+    '</div>';
+  document.getElementById("printBack").onclick = () => renderAdmin(adminStats);
+  // DOM이 실제로 페인트된 뒤 인쇄 다이얼로그를 띄운다(innerHTML 대입 직후 동기 호출 시 빈 화면이 찍힐 수 있음)
+  requestAnimationFrame(() => window.print());
 }
 
 // ===================== 초기화 =====================

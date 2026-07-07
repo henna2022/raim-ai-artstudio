@@ -155,6 +155,38 @@ export function buildInsights(stats, targetMonth, nowMonth) {
   return insights;
 }
 
+// 인쇄용 보고서(T6) DOM 조립에 필요한 데이터 — DOM 접근 없는 순수 함수. 대상 월 결정(defaultReportMonth)·
+// 핵심 요약 문장(buildInsights)을 새로 만들지 않고 그대로 재사용해 buildMonthlyReportSheets와 동일한
+// "대상 월" 개념을 공유한다. app.js의 renderPrintReport는 이 결과만 HTML로 옮겨 그린다.
+export function buildPrintReportData(stats, nowYmd, targetMonth) {
+  const s = stats || {};
+  const report = s.report || [];
+  const target = (targetMonth === undefined || targetMonth === null)
+    ? defaultReportMonth(report, nowYmd)
+    : targetMonth;
+  const nowMonth = nowYmd.slice(0, 7);
+  const partial = target !== null && target === nowMonth;
+  const entry = report.find((m) => m.month === target);
+
+  return {
+    target,
+    targetLabel: ymLabel(target) + (partial ? " (진행 중)" : ""),
+    partial,
+    total: entry ? entry.total : 0,
+    blocks: entry ? entry.blocks : 0,
+    chat: entry ? entry.chat : 0,
+    activeDays: entry ? entry.activeDays : 0,
+    avgActive: entry ? entry.avgActive : 0,
+    peakLabel: entry && entry.peakLabel ? entry.peakLabel : "—",
+    peakCount: entry ? entry.peakCount : 0,
+    monthlyTrend: s.monthly || [], // 화면 월별 탭과 동일 소스(최신순 시리즈)
+    weekday: (entry && entry.weekday) || [], // 대상 월 분해(T3) — 12개월 총합이 아님
+    hourly: (entry && entry.hourly) || [],
+    insights: buildInsights(s, target, nowMonth),
+    dataRange: report.length ? `${report[0].monthLabel} ~ ${report[report.length - 1].monthLabel}` : "",
+  };
+}
+
 // 월간 보고서(.xlsx) 시트 배열 — 대상 월(targetMonth) 하나를 골라 그 달의 상세(일별·요일·시간대·
 // 모드·퍼널) + 12개월 개요를 함께 담는다. targetMonth 생략/null이면 defaultReportMonth로 결정(D6).
 // target이 report에 없는 달(갭)이거나 report가 비어 있어도 예외를 던지지 않고 0/'—'로 채운다(D4).
