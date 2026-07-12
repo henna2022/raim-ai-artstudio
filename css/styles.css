@@ -186,6 +186,87 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .adminBar{height:18px;background:linear-gradient(90deg,#8fb6ff,#6f97f0);border-radius:10px;min-width:6px;}
 .adminBarNum{font-size:15px;font-weight:800;color:#3f6bd6;}
 
+/* ===== ADMIN 대시보드 (?admin — UI 전면 개편) ===== */
+/* 고정 캔버스(1340x800) 안에서 세로로 넘치면 대시보드 안에서만 스크롤 */
+.dash{max-height:702px;overflow-y:auto;padding:2px 8px 18px;text-align:left;-webkit-overflow-scrolling:touch;}
+.dashHead{margin:2px 0 16px;}
+.dashTitle{font-size:30px;font-weight:800;color:#24406e;letter-spacing:-.5px;line-height:1.15;}
+.dashSub{font-size:15px;color:#5a6a8a;margin-top:4px;}
+
+/* PIN 게이트 */
+.adminGate{display:flex;align-items:center;justify-content:center;min-height:620px;}
+.gateCard{background:#fff;border-radius:26px;padding:34px 44px 40px;box-shadow:0 8px 0 rgba(120,150,210,.18);text-align:center;width:340px;}
+.gateTitle{font-size:26px;font-weight:800;color:#24406e;}
+.gateSub{font-size:16px;color:#5a6a8a;margin-top:6px;}
+.gateDots{display:flex;gap:16px;justify-content:center;margin:24px 0 4px;}
+.gateDots i{width:18px;height:18px;border-radius:50%;background:#dce6f5;transition:.15s;}
+.gateDots i.on{background:#5182f0;transform:scale(1.12);}
+.gateErr{height:22px;color:#e0556a;font-size:15px;font-weight:700;margin-bottom:6px;}
+.gateKeys{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.gateKey{border:none;background:#eef3ff;color:#24406e;font:inherit;font-size:26px;font-weight:800;padding:16px 0;border-radius:16px;cursor:pointer;box-shadow:0 4px 0 #d4e2f5;}
+.gateKey:active{transform:translateY(2px);box-shadow:none;}
+.gateKey.ghost{background:transparent;box-shadow:none;color:#5a6a8a;font-size:19px;}
+.shake{animation:shake .4s;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+
+/* KPI 카드 행 */
+.kpiRow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;}
+.kpiCard{background:#fff;border-radius:22px;padding:20px 22px;box-shadow:0 8px 0 rgba(120,150,210,.18);}
+.kpiLbl{font-size:15px;color:#5a6a8a;font-weight:700;}
+.kpiValRow{display:flex;align-items:baseline;gap:10px;margin-top:8px;}
+.kpiVal{font-size:42px;font-weight:800;color:#24406e;line-height:1;}
+.kpiDelta{font-size:15px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap;}
+.kpiDelta.up{color:#1f9d57;background:#e4f7ec;}
+.kpiDelta.down{color:#e0556a;background:#fdeaed;}
+.kpiDelta.flat{color:#8a97ac;background:#eef2f8;}
+.kpiSub{font-size:13px;color:#94a3bb;margin-top:8px;}
+
+/* 카드 공통 */
+.dashCard{background:#fff;border-radius:22px;padding:20px 22px;box-shadow:0 8px 0 rgba(120,150,210,.18);margin-bottom:16px;}
+.dashCardTitle{font-size:19px;font-weight:800;color:#24406e;margin-bottom:12px;}
+
+/* 시간대별 SVG 차트 */
+.hChart{width:100%;height:auto;display:block;}
+.hChart .gridLine{stroke:#e6edf8;stroke-width:1;stroke-dasharray:3 4;}
+.hChart .yLabel{fill:#94a3bb;font-size:13px;text-anchor:end;font-family:inherit;}
+.hChart .xLabel{fill:#94a3bb;font-size:13px;text-anchor:middle;font-family:inherit;}
+.hChart .hBar{fill:url(#hBarGrad);}
+
+/* 분석 인사이트 */
+.insightCard{background:linear-gradient(160deg,#eaf2ff,#dbe9ff);border-radius:22px;padding:20px 22px;box-shadow:0 8px 0 rgba(120,150,210,.16);margin-bottom:16px;}
+.insightHead{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:#24406e;margin-bottom:10px;}
+.insightText{font-size:19px;line-height:1.5;color:#3a4f78;font-weight:700;min-height:50px;display:flex;align-items:center;}
+.insightMore{margin-top:10px;border:none;background:#fff;color:#5182f0;font:inherit;font-size:14px;font-weight:800;padding:8px 18px;border-radius:999px;cursor:pointer;box-shadow:0 4px 0 #cfe0ff;}
+.insightMore:active{transform:translateY(2px);box-shadow:none;}
+
+/* 세그먼트 탭 + 내보내기 */
+.segRow{display:inline-flex;gap:4px;background:#eef3ff;border-radius:999px;padding:5px;margin-bottom:12px;}
+.segBtn{border:0;background:transparent;color:#5a6a8a;font:inherit;font-size:15px;font-weight:800;padding:8px 24px;border-radius:999px;cursor:pointer;transition:.15s;}
+.segBtn.active{background:#fff;color:#5182f0;box-shadow:0 3px 0 rgba(120,150,210,.18);}
+.exportCaption{font-size:14px;color:#5a6a8a;margin:4px 0 14px;font-weight:700;}
+.exportBtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.reportMonthSelect{margin-bottom:6px;}
+.pillBtn{border:none;border-radius:999px;padding:13px 22px;font:inherit;font-size:16px;font-weight:800;cursor:pointer;color:#fff;background:linear-gradient(160deg,#7ea8ff,#5182f0);box-shadow:0 5px 0 var(--blueD);}
+.pillBtn:active{transform:translateY(2px);box-shadow:none;}
+.pillBtn.cyan{background:linear-gradient(160deg,#68d3e8,#3fb6cf);box-shadow:0 5px 0 #2b9bb3;}
+.pillBtn.ghost{background:#fff;color:#5a6a8a;box-shadow:0 5px 0 #cfdcf0;}
+
+/* 앱 정보 · 업데이트 내역 */
+.infoRow{display:grid;grid-template-columns:1fr 1.35fr;gap:16px;}
+.infoLine{display:flex;align-items:center;gap:10px;font-size:16px;color:#3a4f78;font-weight:700;margin-bottom:12px;}
+.infoLine:last-child{margin-bottom:0;}
+.verPill{background:#eef3ff;color:#5182f0;font-weight:800;padding:4px 14px;border-radius:999px;font-size:15px;}
+.logItem{border-bottom:2px solid #eef2f8;}
+.logItem:last-child{border-bottom:none;}
+.logHead{width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;font:inherit;padding:12px 2px;cursor:pointer;color:#24406e;}
+.logVer{font-size:16px;font-weight:800;}
+.logDate{font-size:13px;color:#94a3bb;font-weight:700;}
+.logCaret{margin-left:auto;color:#94a3bb;transition:.2s;}
+.logItem.open .logCaret{transform:rotate(180deg);}
+.logBody{max-height:0;overflow:hidden;transition:max-height .25s ease;padding-left:18px;margin:0;list-style:disc;color:#5a6a8a;font-size:15px;line-height:1.6;}
+.logItem.open .logBody{max-height:360px;padding-bottom:12px;}
+.logBody li{margin-left:6px;margin-bottom:2px;}
+
 /* 처음으로 확인 모달 */
 .modalOverlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
   background:rgba(58,46,74,.45);backdrop-filter:blur(3px);padding:24px;}

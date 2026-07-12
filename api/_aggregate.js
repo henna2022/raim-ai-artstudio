@@ -192,3 +192,39 @@ export function aggregateFunnel(events, nowMs) {
 
   return { ...current, monthly };
 }
+
+// events + 기준시각(nowMs) → 최근 14일(오늘 포함, KST 달력) 일별 퍼널 배열.
+// 항상 길이 14·오름차순, 데이터 없는 날은 0으로 채움. 잘못된 created_at·알 수 없는 type은
+// aggregateFunnel()과 동일 정책으로 무시. 기존 aggregateFunnel() 반환 구조는 건드리지 않는 별도 함수.
+export function aggregateFunnelDaily(events, nowMs) {
+  const dayAgg = {}; // dk → { visits, ok, blocked, error }
+
+  for (const ev of events || []) {
+    const ms = new Date(ev && ev.created_at).getTime();
+    if (!(ms > 0)) continue; // NaN·null(→0)·음수 방어 (aggregate()와 동일 정책)
+    const type = ev && ev.type;
+    if (!FUNNEL_TYPES.includes(type)) continue; // 알 수 없는/누락된 type은 무시
+
+    const dk = dayKey(ms);
+    const c = dayAgg[dk] || (dayAgg[dk] = { visits: 0, ok: 0, blocked: 0, error: 0 });
+    if (type === 'visit') c.visits++;
+    else if (type === 'generate_ok') c.ok++;
+    else if (type === 'generate_blocked') c.blocked++;
+    else if (type === 'generate_error') c.error++;
+    // mode_select는 유효 type이지만 일별 지표에는 포함하지 않음 (월별 퍼널 전용)
+  }
+
+  const out = [];
+  for (let i = 13; i >= 0; i--) { // KST는 DST 없음 → 24시간 뺄셈으로 달력일 이동 안전
+    const dk = dayKey(nowMs - i * DAY);
+    const c = dayAgg[dk];
+    out.push({
+      date: dk,
+      visits: c ? c.visits : 0,
+      ok: c ? c.ok : 0,
+      blocked: c ? c.blocked : 0,
+      error: c ? c.error : 0,
+    });
+  }
+  return out;
+}

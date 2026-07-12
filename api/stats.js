@@ -1,6 +1,6 @@
 // 생성 통계: generations(+events) 테이블에서 최근 1년치를 읽어 KST 기준 대시보드/레포트 집계를 반환
 import { createClient } from '@supabase/supabase-js';
-import { aggregate, aggregateFunnel, windowStartISO } from './_aggregate.js';
+import { aggregate, aggregateFunnel, aggregateFunnelDaily, windowStartISO } from './_aggregate.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -47,6 +47,8 @@ export default async function handler(req, res) {
 
     const stats = aggregate(rows, Date.now());
     stats.funnel = aggregateFunnel(events, Date.now());
+    // 최근 14일 일별 퍼널 — events 테이블이 없으면 위에서 events=[]로 처리되어 0으로 채운 14일이 나감
+    stats.funnelDaily = aggregateFunnelDaily(events, Date.now());
     return res.status(200).json(stats);
   } catch (e) {
     const code = e && e.code;

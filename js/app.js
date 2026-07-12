@@ -1,12 +1,51 @@
 import { I18N } from "./i18n.js?v=13";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData } from "./report.js?v=6";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=6";
+import { buildKpis } from "./dashboard-data.js?v=1";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
 // 프론트엔드와 API가 다른 주소면 여기에 백엔드 주소를 넣으세요. 예: "https://my-app.vercel.app"
 const API_BASE = "";
 const RAIMI_IMG = "assets/raimi.png"; // 라이미 로봇 이미지 (이 위치에 png 파일을 넣어주세요)
+
+// ===================== 관리자 대시보드 설정 =====================
+// 관리자 통계(?admin) 진입 PIN. 필요하면 이 값만 바꾸면 됩니다.
+// ⚠️ 이건 클라이언트 측 "소프트 게이트"일 뿐 진짜 보안이 아닙니다.
+//    소스가 브라우저로 그대로 내려가므로 누구나 볼 수 있습니다(민감 데이터 보호용이 아니라
+//    일반 관람객의 우발적 접근을 막는 용도). 실제 접근 제어는 서버(API)에서 해야 합니다.
+const ADMIN_PIN = "4300";
+// 앱 버전(앱 정보 카드·업데이트 내역에 표시). 시맨틱 버전.
+const APP_VERSION = "2.0.0";
+// 버전별 업데이트 내역 — 실제 진행한 작업만 기록(가짜 기능 금지). 최신이 위.
+const CHANGELOG = [
+  { version: "2.0.0", date: "2026-07", items: [
+    "관리자 통계 화면 대시보드로 전면 개편(KPI·시간대별 차트·분석 인사이트)",
+    "시간대별 그림 생성 수 막대 차트 추가(순수 SVG, 외부 라이브러리 없음)",
+    "규칙 기반 분석 인사이트 카드 추가(최다/최저 월·요일·피크 시간대 등)",
+    "관리자 PIN 소프트 게이트 추가",
+    "앱 정보·버전별 업데이트 내역(아코디언) 추가",
+  ] },
+  { version: "1.4.0", date: "2026-07", items: [
+    "인쇄용 보고서(브라우저 인쇄→PDF) 추가",
+    "월간 보고서에 핵심 요약(규칙 기반 코멘트) 시트 추가",
+  ] },
+  { version: "1.3.0", date: "2026-07", items: [
+    "원본 데이터 내보내기(생성기록·이벤트) 추가",
+    "이용 퍼널(방문→모드선택→생성) 집계 추가",
+  ] },
+  { version: "1.2.0", date: "2026-06", items: [
+    "요일별·시간대별 통계를 가동일 평균으로 정규화(운영일 편중 보정)",
+    "월간 보고서(.xlsx) 및 12개월 개요 추가",
+  ] },
+  { version: "1.1.0", date: "2026-06", items: [
+    "통계 집계 로직 리팩터링(KST 기준 일·주·월)",
+    "방문·모드선택 이벤트 로깅 추가(개인정보 없음)",
+  ] },
+  { version: "1.0.0", date: "2026-06", items: [
+    "라이미의 AI 그림 연구소 키오스크 첫 배포(블록·대화 모드)",
+  ] },
+];
 
 // ===================== 상태 =====================
 let lang = localStorage.getItem("raimi-lang") || "ko";
@@ -468,106 +507,277 @@ document.getElementById("chatFinish").onclick = () => finishChat(false);
 function isAdminMode() {
   return /\badmin\b/.test(location.search) || location.hash.replace("#", "") === "admin";
 }
+// ?admin 진입 → PIN 게이트(세션 내 1회) 통과 후 대시보드 로드
 async function showAdmin() {
-  const el = document.getElementById("s-admin");
-  el.innerHTML = '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
-    '<p class="adminMsg">불러오는 중...</p></div>';
   show("s-admin");
+  if (sessionStorage.getItem("raimi-admin-ok") === "1") {
+    loadAdminDashboard();
+  } else {
+    renderAdminGate();
+  }
+}
+
+// PIN 게이트 화면(터치 키패드). 통과하면 sessionStorage에 표시해 세션 동안 재입력 없음.
+function renderAdminGate() {
+  const el = document.getElementById("s-admin");
+  el.innerHTML =
+    '<div class="adminGate fadeUp"><div class="gateCard" id="gateCard">' +
+      '<div class="gateTitle">🔒 관리자 통계</div>' +
+      '<div class="gateSub">PIN 4자리를 입력하세요</div>' +
+      '<div class="gateDots" id="gateDots"></div>' +
+      '<div class="gateErr" id="gateErr"></div>' +
+      '<div class="gateKeys" id="gateKeys"></div>' +
+    '</div></div>';
+  let buf = "";
+  const dots = document.getElementById("gateDots");
+  const err = document.getElementById("gateErr");
+  const card = document.getElementById("gateCard");
+  const drawDots = () => {
+    dots.innerHTML = [0, 1, 2, 3].map(i => '<i class="' + (i < buf.length ? "on" : "") + '"></i>').join("");
+  };
+  drawDots();
+  const check = () => {
+    if (buf === ADMIN_PIN) {
+      sessionStorage.setItem("raimi-admin-ok", "1");
+      loadAdminDashboard();
+    } else {
+      err.textContent = "PIN이 올바르지 않아요.";
+      card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+      buf = ""; drawDots();
+    }
+  };
+  const press = (d) => {
+    err.textContent = "";
+    if (buf.length < 4) { buf += d; drawDots(); }
+    if (buf.length === 4) setTimeout(check, 120);
+  };
+  const keys = document.getElementById("gateKeys");
+  const layout = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
+  keys.innerHTML = layout.map(k =>
+    k === "clear" ? '<button class="gateKey ghost" data-k="clear">지움</button>'
+    : k === "back" ? '<button class="gateKey ghost" data-k="back">←</button>'
+    : '<button class="gateKey" data-k="' + k + '">' + k + '</button>'
+  ).join("");
+  keys.querySelectorAll(".gateKey").forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (k === "clear") { buf = ""; err.textContent = ""; drawDots(); }
+    else if (k === "back") { buf = buf.slice(0, -1); err.textContent = ""; drawDots(); }
+    else press(k);
+  });
+}
+
+async function loadAdminDashboard() {
+  const el = document.getElementById("s-admin");
+  el.innerHTML = '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">불러오는 중...</p></div>';
   try {
     const r = await fetch(API_BASE + "/api/stats");
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || "통계를 불러오지 못했어요.");
     renderAdmin(s);
   } catch (e) {
-    const msg = el.querySelector(".adminMsg");
-    if (msg) msg.textContent = "오류: " + e.message;
+    el.innerHTML =
+      '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">오류: ' + e.message + '</p>' +
+      '<div class="exportBtns" style="justify-content:center;margin-top:16px"><button class="pillBtn" id="adminRetry">🔄 다시 시도</button></div></div>';
+    const b = document.getElementById("adminRetry");
+    if (b) b.onclick = loadAdminDashboard;
   }
 }
+
 let adminStats = null;
-let adminPeriod = "daily";
-const ADMIN_TABS = [
-  { id: "daily", tab: "일별", title: "일별 생성 수 (한국시간)" },
-  { id: "weekly", tab: "주별", title: "주별 생성 수 (한국시간)" },
-  { id: "monthly", tab: "월별", title: "월별 생성 수 (한국시간)" },
-  { id: "weekday", tab: "요일별", title: "요일별 생성 수 (한국시간)" },
-  { id: "hourly", tab: "시간대별", title: "시간대별 생성 수 (한국시간)" },
-];
-function adminChartHTML() {
-  const data = (adminStats && adminStats[adminPeriod]) || [];
-  // 요일 탭만 가동일당 평균(avg) 기준 — 관측 기회가 많은 요일이 무조건 커 보이는 걸 보정
-  const isWeekday = adminPeriod === "weekday";
-  const valueOf = (d) => isWeekday ? d.avg : d.count;
-  const max = Math.max(1, ...data.map(valueOf));
-  return data.map(d => {
-    const numText = isWeekday ? ("평균 " + d.avg + " (총 " + d.count + ")") : String(d.count);
-    return '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
-      '<span class="adminBar" style="width:' + Math.round((valueOf(d) / max) * 100) + '%"></span>' +
-      '<span class="adminBarNum">' + numText + '</span></div>';
-  }).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
+let exportPeriod = "daily";        // 설정/내보내기 세그먼트: daily | weekly | monthly
+let adminInsights = [];            // buildInsights 결과(규칙 기반 문자열들)
+let adminInsightIdx = 0;
+
+// 증감 % → 색상 알약. null/undefined면 중립 "—".
+function kpiDelta(pct) {
+  if (pct === null || pct === undefined) return '<span class="kpiDelta flat">—</span>';
+  if (pct > 0) return '<span class="kpiDelta up">▲ ' + pct + '%</span>';
+  if (pct < 0) return '<span class="kpiDelta down">▼ ' + Math.abs(pct) + '%</span>';
+  return '<span class="kpiDelta flat">0%</span>';
 }
-function syncAdmin() {
-  const meta = ADMIN_TABS.find(t => t.id === adminPeriod) || ADMIN_TABS[0];
-  const title = document.getElementById("adminChartTitle");
-  if (title) title.textContent = meta.title;
-  const chart = document.getElementById("adminChart");
-  if (chart) chart.innerHTML = adminChartHTML();
-  document.querySelectorAll(".adminTab").forEach(b =>
-    b.classList.toggle("active", b.dataset.period === adminPeriod));
+const kpiVal = (v) => (v === null || v === undefined) ? "—" : v;
+
+// y축 눈금 간격을 "보기 좋은 정수"로 (막대 최대값 / 4 이상). 라벨이 정수로 떨어지게.
+function niceStep(maxCount) {
+  const raw = Math.max(1, Math.ceil(maxCount / 4));
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  return nice * mag;
 }
+// 시간대별(0~23시) 그림 생성 수 — 순수 인라인 SVG 막대 차트(외부 라이브러리 없음).
+// y축 눈금 + 점선 그리드 + x축 시각 라벨(2시간 간격) + 블루 그라데이션 막대 + hover 툴팁(<title>).
+function hourlyChartSVG(hourly) {
+  const data = Array.isArray(hourly) ? hourly : [];
+  if (!data.length) return '<p class="adminMsg">아직 기록이 없어요.</p>';
+  const W = 1040, H = 280, padL = 46, padR = 16, padT = 14, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = data.length;
+  const maxCount = Math.max(1, ...data.map(d => d.count));
+  const step = niceStep(maxCount), niceMax = step * 4, ticks = 4;
+  let grid = "";
+  for (let i = 0; i <= ticks; i++) {
+    const val = step * i;
+    const y = padT + plotH - (plotH * i / ticks);
+    grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" class="gridLine"/>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" class="yLabel">' + val + '</text>';
+  }
+  const bandW = plotW / n;
+  const barW = Math.min(26, bandW * 0.62);
+  let bars = "";
+  data.forEach((d, i) => {
+    const x = padL + bandW * i + (bandW - barW) / 2;
+    const h = (d.count / niceMax) * plotH;
+    const y = padT + plotH - h;
+    bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
+      '" height="' + Math.max(0, h).toFixed(1) + '" rx="4" class="hBar">' +
+      '<title>' + d.label + ' · ' + d.count + '건 (' + d.share + '%)</title></rect>';
+    if (i % 2 === 0) {
+      bars += '<text x="' + (padL + bandW * i + bandW / 2).toFixed(1) + '" y="' + (H - 12) + '" class="xLabel">' + i + '</text>';
+    }
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="hChart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="시간대별 그림 생성 수">' +
+    '<defs><linearGradient id="hBarGrad" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#7ea8ff"/><stop offset="1" stop-color="#5182f0"/></linearGradient></defs>' +
+    grid + bars + '</svg>';
+}
+
+function renderInsight() {
+  const box = document.getElementById("insightText");
+  if (!box) return;
+  box.textContent = adminInsights.length ? adminInsights[adminInsightIdx % adminInsights.length] : "데이터 누적 중";
+}
+
+// 설정/내보내기 세그먼트 상태 반영(활성 탭·월 select 표시·캡션·엑셀 버튼 라벨)
+function syncExport() {
+  document.querySelectorAll(".segBtn").forEach(b => b.classList.toggle("active", b.dataset.period === exportPeriod));
+  const rm = document.getElementById("reportMonth");
+  const hasMonths = rm && rm.dataset.has === "1";
+  if (rm) rm.style.display = (exportPeriod === "monthly" && hasMonths) ? "" : "none";
+  const cap = document.getElementById("exportCaption");
+  if (cap) {
+    if (exportPeriod === "daily") cap.textContent = "기준: 오늘 (" + kstYmd() + ", KST)";
+    else if (exportPeriod === "weekly") cap.textContent = "기준: 이번 주 · 월~일 (KST)";
+    else {
+      const lbl = rm && rm.selectedOptions[0] ? rm.selectedOptions[0].textContent : "—";
+      cap.textContent = "대상 월: " + lbl;
+    }
+  }
+  const xb = document.getElementById("exportExcel");
+  if (xb) xb.textContent = exportPeriod === "monthly" ? "📄 월간 보고서 (.xlsx)" : "📊 통계 (.xlsx)";
+}
+// 엑셀 출력: 일별/주별은 스냅샷, 월별은 월간 보고서
+function doExcel() {
+  if (exportPeriod === "monthly") exportMonthlyReport();
+  else exportAdminXlsx();
+}
+
 function renderAdmin(s) {
   adminStats = s;
+  exportPeriod = "daily";
   const el = document.getElementById("s-admin");
-  const tabs = ADMIN_TABS.map(t =>
-    '<button class="adminTab' + (t.id === adminPeriod ? ' active' : '') +
-    '" data-period="' + t.id + '">' + t.tab + '</button>'
-  ).join("");
-  const card = (n, l) => '<div class="adminCard"><div class="adminNum">' + (n ?? 0) + '</div><div class="adminLbl">' + l + '</div></div>';
-  el.innerHTML =
-    '<div class="fadeUp center"><h2 class="reviewH2">📊 생성 통계</h2>' +
-    '<div class="adminCards">' +
-      card(s.today, "오늘") + card(s.thisWeek, "이번 주") + card(s.thisMonth, "이번 달") +
-    '</div>' +
-    '<div class="adminTabs">' + tabs + '</div>' +
-    '<h3 class="adminH3" id="adminChartTitle"></h3>' +
-    '<div class="adminDaily" id="adminChart"></div>' +
-    '<div class="adminBtns">' +
-      '<select class="reportMonthSelect" id="reportMonth"></select>' +
-      '<button class="actionBtn excel" id="adminReport">📄 월별 레포트</button>' +
-      '<button class="actionBtn excelAlt" id="adminExport">📊 통계 내보내기</button>' +
-      '<button class="actionBtn secondary" id="adminRawExport">🗂 원본 데이터</button>' +
-      '<button class="actionBtn secondary" id="adminPrintReport">🖨 인쇄용 보고서</button>' +
-      '<button class="actionBtn secondary" id="adminRefresh">🔄 새로고침</button>' +
-    '</div></div>';
-  el.querySelectorAll(".adminTab").forEach(b =>
-    b.onclick = () => { adminPeriod = b.dataset.period; syncAdmin(); });
-  const rb = document.getElementById("adminRefresh");
-  if (rb) rb.onclick = showAdmin;
-  const xb = document.getElementById("adminExport");
-  if (xb) xb.onclick = exportAdminXlsx;
-  const rp = document.getElementById("adminReport");
-  if (rp) rp.onclick = exportMonthlyReport;
-  const rawB = document.getElementById("adminRawExport");
-  if (rawB) rawB.onclick = exportRawData;
-  const ppB = document.getElementById("adminPrintReport");
-  if (ppB) ppB.onclick = () => renderPrintReport();
+  const report = s.report || [];
+  const nowMonth = kstYmd().slice(0, 7);
 
-  // 대상 월 선택: report[]의 월 최신순, 기본값은 defaultReportMonth (가장 최근 완결월)
+  // KPI (buildKpis 순수 함수)
+  const k = buildKpis(s, kstYmd());
+  const kpiCard = (lbl, val, delta, sub) =>
+    '<div class="kpiCard"><div class="kpiLbl">' + lbl + '</div>' +
+    '<div class="kpiValRow"><span class="kpiVal">' + kpiVal(val) + '</span>' + kpiDelta(delta) + '</div>' +
+    '<div class="kpiSub">' + sub + '</div></div>';
+
+  // 분석 인사이트 (규칙 기반 buildInsights — 외부 AI 미사용)
+  adminInsights = buildInsights(s, defaultReportMonth(report, kstYmd()), nowMonth) || [];
+  adminInsightIdx = 0;
+  const showMore = adminInsights.length > 1;
+
+  // 세그먼트 탭
+  const seg = [["daily", "일별"], ["weekly", "주별"], ["monthly", "월별"]].map(([id, t]) =>
+    '<button class="segBtn' + (id === "daily" ? " active" : "") + '" data-period="' + id + '">' + t + '</button>'
+  ).join("");
+
+  // 업데이트 내역 아코디언(첫 항목 기본 펼침)
+  const changelog = CHANGELOG.map((c, i) =>
+    '<div class="logItem' + (i === 0 ? " open" : "") + '">' +
+      '<button class="logHead" data-i="' + i + '"><span class="logVer">v' + c.version + '</span>' +
+      '<span class="logDate">' + c.date + '</span><span class="logCaret">▾</span></button>' +
+      '<ul class="logBody">' + c.items.map(it => "<li>" + it + "</li>").join("") + '</ul>' +
+    '</div>'
+  ).join("");
+
+  el.innerHTML =
+    '<div class="dash fadeUp">' +
+      '<div class="dashHead">' +
+        '<div class="dashTitle">AI 그림 연구소 이용자 통계</div>' +
+        '<div class="dashSub">서울 로봇인공지능과학관 · 라이미의 AI 그림 연구소</div>' +
+      '</div>' +
+
+      '<div class="kpiRow">' +
+        kpiCard("오늘 이용자수", k.todayVisits, k.vsYesterdayPct, "어제 대비") +
+        kpiCard("이번 주 이용자수", k.thisWeekVisits, k.vsLastWeekPct, "지난주 같은 시점 대비") +
+        kpiCard("오늘 그림 생성 수", k.todayGen, k.vsYesterdayGenPct, "어제 대비") +
+      '</div>' +
+
+      '<div class="dashCard"><div class="dashCardTitle">시간대별 그림 생성 수 (한국시간)</div>' +
+        hourlyChartSVG(s.hourly) + '</div>' +
+
+      '<div class="insightCard"><div class="insightHead">✨ 분석 인사이트</div>' +
+        '<div class="insightText" id="insightText"></div>' +
+        (showMore ? '<button class="insightMore" id="insightMore">다른 인사이트 →</button>' : "") +
+      '</div>' +
+
+      '<div class="dashCard"><div class="dashCardTitle">설정 · 내보내기</div>' +
+        '<div class="segRow">' + seg + '</div>' +
+        '<div><select class="reportMonthSelect" id="reportMonth"></select></div>' +
+        '<div class="exportCaption" id="exportCaption"></div>' +
+        '<div class="exportBtns">' +
+          '<button class="pillBtn" id="exportExcel">📊 통계 (.xlsx)</button>' +
+          '<button class="pillBtn cyan" id="exportPdf">🖨 PDF (인쇄용 보고서)</button>' +
+          '<button class="pillBtn ghost" id="exportRaw">🗂 원본 데이터</button>' +
+          '<button class="pillBtn ghost" id="exportRefresh">🔄 새로고침</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="infoRow">' +
+        '<div class="dashCard"><div class="dashCardTitle">앱 정보</div>' +
+          '<div class="infoLine">버전 <span class="verPill">v' + APP_VERSION + '</span></div>' +
+          '<div class="infoLine">개발 이주원 (Juwon Lee)</div>' +
+          '<div class="infoLine">서울 로봇인공지능과학관</div>' +
+        '</div>' +
+        '<div class="dashCard"><div class="dashCardTitle">업데이트 내역</div>' + changelog + '</div>' +
+      '</div>' +
+    '</div>';
+
+  // 대상 월 select — report[] 최신순, 기본값 defaultReportMonth
   const rm = document.getElementById("reportMonth");
   if (rm) {
-    const report = s.report || [];
-    const nowMonth = kstYmd().slice(0, 7);
     if (!report.length) {
-      rm.style.display = "none";
-      if (rp) rp.disabled = true;
+      rm.dataset.has = "0";
     } else {
+      rm.dataset.has = "1";
       rm.innerHTML = report.slice().reverse().map((m) =>
         '<option value="' + m.month + '">' + m.monthLabel + (m.month === nowMonth ? " (진행 중)" : "") + '</option>'
       ).join("");
       const def = defaultReportMonth(report, kstYmd());
       if (def) rm.value = def;
     }
+    rm.onchange = syncExport;
   }
-  syncAdmin();
+
+  // 배선
+  renderInsight();
+  const moreB = document.getElementById("insightMore");
+  if (moreB) moreB.onclick = () => { adminInsightIdx++; renderInsight(); };
+  document.querySelectorAll(".segBtn").forEach(b =>
+    b.onclick = () => { exportPeriod = b.dataset.period; syncExport(); });
+  const xb = document.getElementById("exportExcel"); if (xb) xb.onclick = doExcel;
+  const pb = document.getElementById("exportPdf"); if (pb) pb.onclick = () => renderPrintReport();
+  const rawB = document.getElementById("exportRaw"); if (rawB) rawB.onclick = exportRawData;
+  const rfB = document.getElementById("exportRefresh"); if (rfB) rfB.onclick = loadAdminDashboard;
+  el.querySelectorAll(".logHead").forEach(h =>
+    h.onclick = () => h.parentElement.classList.toggle("open"));
+
+  syncExport();
 }
 
 // 한국시간 기준 타임스탬프/날짜 (파일명·표시용)
