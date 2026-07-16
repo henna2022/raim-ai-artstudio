@@ -27,9 +27,9 @@
     exportMonthlyReport/kstYmd/kstStamp.
 - 규칙(어기면 안 됨):
   * 모든 집계·라벨은 KST 기준.
-  * js/css 수정 시 index.html의 해당 ?v= 쿼리 버전을 1 올린다. app.js가 import하는 모듈을
-    수정하면 app.js의 import ?v=도 올리고 index.html의 app.js ?v=도 올린다.
-  * sw.js의 CORE 목록을 바꾸면 CACHE 이름을 bump한다. /api/* 는 SW가 캐시하지 않는다(유지).
+  * js/css 수정 후 `node scripts/bump-version.mjs` 실행 (정합 검사는 `--check` 모드).
+    script가 index.html·app.js imports·sw.js CACHE를 모두 통일 관리한다.
+  * /api/* 는 SW가 캐시하지 않는다(유지).
   * 레포트의 시트 간 총계 정합 불변식: 일별 추이 합 = 모드별 합계 = 월별 분석 총 생성 합.
 - 검증(완료 전 필수, 결과를 보고에 포함):
   * node --check <수정한 모든 js>

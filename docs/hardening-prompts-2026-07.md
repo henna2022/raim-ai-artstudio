@@ -78,9 +78,8 @@ T0~T6(통계 고도화)이 완료된 뒤, 상위 모델(Fable 5)이 코드 전�
   * 모든 집계·라벨은 KST 기준. events.type CHECK 제약은
     ('visit','mode_select','generate_ok','generate_blocked','generate_error') — 새 type 추가 금지,
     세분류는 detail 컬럼으로.
-  * js/css 수정 시 index.html의 ?v= 버전 bump, app.js가 import하는 모듈 수정 시 import ?v=도
-    bump. sw.js CORE 변경 시 CACHE 이름 bump. /api/*는 SW가 캐시하지 않는다(유지).
-    (R6 완료 후에는 `node scripts/bump-version.mjs`로 대체)
+  * js/css 수정 후 `node scripts/bump-version.mjs` 실행 (정합 검사는 `--check` 모드).
+    sw.js의 CORE 변경 시 script가 CACHE를 자동으로 bump한다. /api/*는 SW가 캐시하지 않는다(유지).
   * 아이가 보는 에러 문구는 친절한 한국어/영어(i18n)로 — 기술 용어 노출 금지.
 - 작업 방식(v2에서 추가된 규칙):
   * 버그 수정 작업은 반드시 "수정 전 실패를 재현하는 테스트/스크립트"를 먼저 만들어 실패를
