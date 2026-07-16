@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { addLogo } from './_watermark.js';
 import { uploadPublic, cleanupOld } from './_storage.js';
 import { checkPrompt } from './_filter.js';
+import { checkPromptLength, evaluateGenerateRateLimit, isMissingTableError, GENERATE_WINDOW_MS } from './_limits.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -27,6 +28,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '그림 설명이 필요해요.' });
     }
 
+    // 0차: 입력 한도(하드 캡) — 무인증 공개 엔드포인트라 스크립트가 비정상적으로 긴 프롬프트로
+    // 비용을 태울 수 있음. api/_limits.js의 순수 함수(tests/limits.test.mjs에서 단위 테스트).
+    const lenCheck = checkPromptLength(prompt);
+    if (!lenCheck.ok) {
+      return res.status(400).json({ error: lenCheck.error });
+    }
+
     // 1차: 키워드 필터 (순수 함수, api/_filter.js — 재설계 내역은 해당 파일 참고)
     const kwCheck = checkPrompt(prompt);
     if (!kwCheck.ok) {
@@ -42,6 +50,18 @@ export default async function handler(req, res) {
     if (await moderationBlocked(prompt)) {
       await logEvt('generate_blocked', { mode, lang, session_id, detail: 'banned' });
       return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?' });
+    }
+
+    // 3차: 호출 한도(Supabase 기반, 생성 직전 검사) — 서버리스 인스턴스는 메모리를 공유하지
+    // 않으므로 events 테이블이 유일하게 신뢰 가능한 공유 상태다. 최근 60초의 generate_ok/error
+    // 건수로 session_id 한도(≥3)와 전체 한도(≥20)를 판정한다(api/_limits.js 참고).
+    // 알려진 한계: generate_ok/error는 생성이 *끝난 뒤*에만 기록되므로, 첫 60초 안에 동시다발로
+    // 쏘는 버스트는 이 검사를 통과할 수 있다. events.type CHECK 제약(새 type 추가 금지) 아래에서는
+    // "시도 시점 기록"이 구조적으로 불가능하다 — 이 한도는 지속 남용을 막는 베스트에포트이며
+    // 완전한 방어를 주장하지 않는다.
+    if (await isGenerateRateLimited(session_id)) {
+      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'ratelimit' });
+      return res.status(429).json({ error: '지금은 그림을 너무 많이 그리고 있어요. 잠깐 쉬었다가 다시 해볼까요?' });
     }
 
     const safePrompt =
@@ -133,6 +153,28 @@ async function moderationBlocked(prompt) {
     return false; // fail-open — 이미지 모델 자체 안전장치 존재
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// events에서 최근 60초의 generate_ok/generate_error 건수를 조회해 호출 한도를 판정한다.
+// events 테이블이 없으면(42P01, T1 SQL 미적용) 한도 검사를 생략한다(api/stats.js의
+// isMissingTable과 동일한 우아한 폴백 패턴). 조회 자체가 실패해도(네트워크 오류 등) 생성 흐름을
+// 막지 않는다 — 가용성 우선(moderationBlocked와 동일 철학의 fail-open).
+async function isGenerateRateLimited(session_id) {
+  const now = Date.now();
+  const sinceISO = new Date(now - GENERATE_WINDOW_MS).toISOString();
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('session_id, created_at')
+      .in('type', ['generate_ok', 'generate_error'])
+      .gte('created_at', sinceISO);
+    if (error) throw error;
+    return evaluateGenerateRateLimit({ events: data || [], sessionId: session_id, now }).blocked;
+  } catch (e) {
+    if (isMissingTableError(e)) return false;
+    console.error('호출 한도 검사 실패(통과 처리):', e?.message || e);
+    return false;
   }
 }
 
