@@ -87,7 +87,14 @@ function extraSteps() { return I18N[lang].STEPS_EXTRA || []; }
 // 현재 활성화된 단계 목록 (기본 10개, +5를 누르면 15개)
 function activeSteps() { return extraMode ? steps().concat(extraSteps()) : steps(); }
 function tweaks() { return I18N[lang].TWEAKS; }
-function fill(str, vars) { return str.replace(/\{(\w+)\}/g, (_, k) => (vars && k in vars) ? vars[k] : ""); }
+// HTML 이스케이프: 5종 특수문자 치환 (& < > " ')
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+// 문자열 템플릿 치환: {key} → vars.key (vars의 값은 HTML 이스케이프)
+function fill(str, vars) { return str.replace(/\{(\w+)\}/g, (_, k) => (vars && k in vars) ? escHtml(vars[k]) : ""); }
 
 // 라이미 이미지를 못 찾을 때 이모지로 대체
 function raimiFallback(img) {
@@ -413,7 +420,7 @@ function renderReview(url, err) {
   const s = document.getElementById("s-review");
   let html = '<div class="fadeUp center"><h2 class="reviewH2">' + t("reviewH2") + "</h2>";
   if (err) { html += '<div class="errBox">' + fill(t("reviewErr"), { err }) + "</div>"; }
-  else { html += '<div class="artFrame"><img src="' + url + '" alt="art"></div>'; }
+  else { html += '<div class="artFrame"><img src="' + escHtml(url) + '" alt="art"></div>'; }
   html += '<div class="btnRow" id="reviewBtns"></div></div>';
   s.innerHTML = html;
 
@@ -445,10 +452,10 @@ function renderResult(url) {
   s.innerHTML =
     '<div class="fadeUp center"><h2 class="reviewH2">' + t("resultH2") + "</h2>" +
     '<div class="resultLayout">' +
-      '<div class="artFrame"><img src="' + url + '" alt="art"></div>' +
+      '<div class="artFrame"><img src="' + escHtml(url) + '" alt="art"></div>' +
       '<div class="qrCard"><div class="qrTitle">' + t("qrTitle") + "</div>" +
       '<div class="qrDesc">' + t("qrDesc") + "</div>" +
-      '<img class="qrImg" src="' + qr + '" alt="QR">' +
+      '<img class="qrImg" src="' + escHtml(qr) + '" alt="QR">' +
       '<div class="qrWarn">' + t("qrWarn") + "</div></div>" +
     "</div>" +
     '<div class="btnRow"><button class="actionBtn primary" id="againBtn">' + t("againBtn") + "</button></div></div>";
@@ -622,7 +629,7 @@ async function loadAdminDashboard() {
     renderAdmin(s);
   } catch (e) {
     el.innerHTML =
-      '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">오류: ' + e.message + '</p>' +
+      '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">오류: ' + escHtml(e.message) + '</p>' +
       '<div class="exportBtns" style="justify-content:center;margin-top:16px"><button class="pillBtn" id="adminRetry">🔄 다시 시도</button></div></div>';
     const b = document.getElementById("adminRetry");
     if (b) b.onclick = loadAdminDashboard;
@@ -677,7 +684,7 @@ function hourlyChartSVG(hourly) {
     const y = padT + plotH - h;
     bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
       '" height="' + Math.max(0, h).toFixed(1) + '" rx="4" class="hBar">' +
-      '<title>' + d.label + ' · ' + d.count + '건 (' + d.share + '%)</title></rect>';
+      '<title>' + escHtml(d.label) + ' · ' + d.count + '건 (' + d.share + '%)</title></rect>';
     if (i % 2 === 0) {
       bars += '<text x="' + (padL + bandW * i + bandW / 2).toFixed(1) + '" y="' + (H - 12) + '" class="xLabel">' + i + '</text>';
     }
@@ -802,7 +809,7 @@ function renderAdmin(s) {
     } else {
       rm.dataset.has = "1";
       rm.innerHTML = report.slice().reverse().map((m) =>
-        '<option value="' + m.month + '">' + m.monthLabel + (m.month === nowMonth ? " (진행 중)" : "") + '</option>'
+        '<option value="' + escHtml(m.month) + '">' + escHtml(m.monthLabel) + (m.month === nowMonth ? " (진행 중)" : "") + '</option>'
       ).join("");
       const def = defaultReportMonth(report, kstYmd());
       if (def) rm.value = def;
@@ -875,7 +882,7 @@ function printBarRows(data, valueOf, numText) {
   const list = data || [];
   const max = Math.max(1, ...list.map(valueOf));
   return list.map((d) =>
-    '<div class="adminBarRow"><span class="adminBarDay">' + d.label + '</span>' +
+    '<div class="adminBarRow"><span class="adminBarDay">' + escHtml(d.label) + '</span>' +
     '<span class="adminBar" style="width:' + Math.round((valueOf(d) / max) * 100) + '%"></span>' +
     '<span class="adminBarNum">' + numText(d) + '</span></div>'
   ).join("") || '<p class="adminMsg">아직 기록이 없어요.</p>';
@@ -902,8 +909,8 @@ function renderPrintReport(targetMonth) {
   const card = (n, l) => '<div class="adminCard"><div class="adminNum">' + (n ?? 0) + '</div><div class="adminLbl">' + l + '</div></div>';
   el.innerHTML =
     '<div class="printReport fadeUp">' +
-      '<h2 class="reviewH2">라이미의 AI 그림 연구소 — ' + data.targetLabel + ' 보고서</h2>' +
-      '<p class="printPeriod">데이터 범위: ' + (data.dataRange || "—") + '</p>' +
+      '<h2 class="reviewH2">라이미의 AI 그림 연구소 — ' + escHtml(data.targetLabel) + ' 보고서</h2>' +
+      '<p class="printPeriod">데이터 범위: ' + escHtml(data.dataRange || "—") + '</p>' +
       '<div class="adminCards">' +
         card(data.total, "총 생성") + card(data.activeDays, "가동일수") + card(data.avgActive, "가동일 평균") +
       '</div>' +
@@ -914,7 +921,7 @@ function renderPrintReport(targetMonth) {
       '<h3 class="adminH3">시간대별</h3>' +
       '<div class="adminDaily">' + printBarRows(data.hourly, (d) => d.count, (d) => d.count) + '</div>' +
       '<h3 class="adminH3">핵심 요약</h3>' +
-      '<ul class="printInsights">' + data.insights.map((t) => "<li>" + t + "</li>").join("") + '</ul>' +
+      '<ul class="printInsights">' + data.insights.map((t) => "<li>" + escHtml(t) + "</li>").join("") + '</ul>' +
       '<div class="adminBtns noPrint"><button class="actionBtn secondary" id="printBack">← 돌아가기</button></div>' +
     '</div>';
   document.getElementById("printBack").onclick = () => renderAdmin(adminStats);
