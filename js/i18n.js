@@ -17,6 +17,9 @@ export const I18N = {
     confirmCancel: "아니요",
     confirmOk: "네, 처음으로",
 
+    // 공용 에러 메시지 (네트워크 타임아웃 등 — R3)
+    errTimeout: "그림 그리기가 너무 오래 걸려요. 다시 한 번 해볼까요?",
+
     // 인트로
     introHi: "안녕하세요! 저는 그림 친구 라이미예요",
     introTitle: "라이미와 함께 그림을 만들어봐요!",
@@ -158,6 +161,9 @@ export const I18N = {
     confirmHome: "Everything you've made so far will be lost.\nGo back to the start?",
     confirmCancel: "No",
     confirmOk: "Yes, start over",
+
+    // Shared error messages (network timeouts etc. — R3)
+    errTimeout: "This is taking too long. Want to try again?",
 
     introHi: "Hi! I'm Raimi, your drawing AI buddy",
     introTitle: "Let's make a picture together with Raimi!",

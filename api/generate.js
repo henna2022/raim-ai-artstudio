@@ -68,17 +68,34 @@ export default async function handler(req, res) {
       '어린이를 위한 밝고 귀엽고 다정한 동화책 일러스트 스타일, 부드러운 파스텔 색감, 안전한 분위기, 글자 없음. ' +
       '실제 인물·연예인·유명 캐릭터·로고·브랜드는 절대 그리지 말고, 원작과 무관한 새롭고 독창적인 캐릭터로 그려. ' + prompt;
 
-    const r = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.IMAGE_MODEL || 'gpt-image-1-mini',
-        prompt: safePrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'low',
-      }),
-    });
+    // 이미지 생성 타임아웃(50초, AbortController) — 네트워크가 응답을 안 주면 서버리스
+    // 함수가 maxDuration까지 그대로 붙잡혀 있게 되고, 클라는 스피너에 갇힌다. 타임아웃 시
+    // 기존 502 경로를 그대로 재사용한다(moderationBlocked의 5초 타임아웃과 동일 패턴).
+    const genController = new AbortController();
+    const genTimer = setTimeout(() => genController.abort(), 50000);
+    let r;
+    try {
+      r = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: process.env.IMAGE_MODEL || 'gpt-image-1-mini',
+          prompt: safePrompt,
+          n: 1,
+          size: '1024x1024',
+          quality: 'low',
+        }),
+        signal: genController.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        await logEvt('generate_error', { mode, lang, session_id, detail: 'timeout' });
+        return res.status(502).json({ error: '이미지 생성에 실패했어요.' });
+      }
+      throw e;
+    } finally {
+      clearTimeout(genTimer);
+    }
     const data = await r.json();
     if (!r.ok) {
       const reason = String(data?.error?.message || '이미지 생성 실패').slice(0, 100);
@@ -94,10 +111,15 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(b64, 'base64');
 
     // 우측 하단에 서울라임 로고 합성 (합성 실패 시 원본 그대로 업로드)
+    // 실패해도 생성 자체는 성공으로 취급하되(사용자에게는 원본이라도 그림이 나감), generate_ok
+    // 이벤트에 detail:'logo_fail' 표식을 남겨 관찰 가능하게 한다(events.type CHECK 제약 때문에
+    // 새 type을 추가할 수 없어 detail을 활용).
     let outBuffer = buffer;
+    let logoFailed = false;
     try {
       outBuffer = await addLogo(buffer);
     } catch (e) {
+      logoFailed = true;
       console.error('로고 합성 실패, 원본 업로드:', e?.message || e);
     }
 
@@ -115,7 +137,7 @@ export default async function handler(req, res) {
     }
 
     await logGeneration(mode); // 기존 generations insert(하위 호환 이중 기록)
-    await logEvt('generate_ok', { mode, lang, session_id });
+    await logEvt('generate_ok', { mode, lang, session_id, detail: logoFailed ? 'logo_fail' : undefined });
     await cleanupOld(Date.now() - 5 * 60 * 60 * 1000);
     return res.status(200).json({ url });
   } catch (e) {

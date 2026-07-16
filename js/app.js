@@ -1,4 +1,4 @@
-import { I18N } from "./i18n.js?v=13";
+import { I18N } from "./i18n.js?v=14";
 import { downloadXlsx } from "./xlsx-mini.js?v=2";
 import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=6";
 import { buildKpis } from "./dashboard-data.js?v=1";
@@ -63,6 +63,8 @@ let quizOrder = [];
 let quizPos = 0;
 let quizScore = 0;
 let genTimer = null;
+let genBusy = false;   // runGenerate 중복 실행 가드(연타 방지) — renderResult/renderReview 도달 시 해제
+let genWatchdog = null; // s-gen 워치독 타이머(runGenerate 진입 시 90초로 설정) — show()에서 항상 해제
 let sessionId = crypto.randomUUID(); // 키오스크 "새 방문" 단위 — resetToStart()에서 재발급
 
 // ===================== 번역 도우미 =====================
@@ -135,8 +137,14 @@ function setLang(code) {
 document.getElementById("langBtn").onclick = () => setLang(lang === "ko" ? "en" : "ko");
 
 // ===================== 화면 전환 =====================
+function clearGenWatchdog() {
+  if (genWatchdog) { clearTimeout(genWatchdog); genWatchdog = null; }
+}
 function show(id) {
   currentScreen = id;
+  // s-gen 워치독은 화면이 바뀌는 순간 반드시 해제한다 — 결과/리뷰 화면으로 넘어간 뒤
+  // 뒤늦게 워치독이 발화해 화면을 덮어써버리는 오발사를 막는다(runGenerate가 필요하면 다시 건다).
+  clearGenWatchdog();
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
   document.getElementById(id).classList.add("on");
   document.getElementById("homeBtn").style.display = (id === "s-intro") ? "none" : "block";
@@ -265,19 +273,45 @@ document.querySelectorAll(".bigCard").forEach(b => {
 });
 
 // ===================== API 호출 =====================
+// 네트워크가 응답을 안 주면(끊김·불안정 와이파이) fetch가 영원히 안 끝나 스피너에 갇힐 수 있다.
+// AbortController로 클라 쪽 타임아웃을 걸고, 타임아웃 시 아이가 이해할 수 있는 문구(t("errTimeout"))로
+// throw한다 — 호출부(runGenerate/sendChat/finishChat)의 기존 catch가 그대로 복구 경로가 된다.
 async function apiGenerate(prompt, mode) {
-  const r = await fetch(API_BASE + "/api/generate", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, mode, session_id: sessionId, lang })
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 70000);
+  let r;
+  try {
+    r = await fetch(API_BASE + "/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, mode, session_id: sessionId, lang }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error(t("errTimeout"));
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "생성 실패"); }
   return (await r.json()).url;
 }
 async function apiChat(messages, mode) {
-  const r = await fetch(API_BASE + "/api/chat", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, lang, mode })
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  let r;
+  try {
+    r = await fetch(API_BASE + "/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      // session_id를 보내야 서버(R2)가 챗 버스트 한도를 세션 단위로 걸 수 있다(안 보내면 'global' 하나로 묶임).
+      body: JSON.stringify({ messages, lang, mode, session_id: sessionId }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error(t("errTimeout"));
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "대화 실패"); }
   return (await r.json()).reply;
 }
@@ -352,9 +386,19 @@ function buildPrompt(extra) {
 }
 
 // ===================== 생성 + 리뷰 =====================
+// 중복 실행 가드: 옵션 연타(renderBlockStep)·"이대로 그리기"(renderMoreChoice)·"다시 만들기"
+// (renderReviewButtons retry)가 모두 이 함수를 호출한다 — genBusy 하나로 전부 막는다.
 async function runGenerate(prompt) {
+  if (genBusy) return; // 이미 생성 중이면 재진입 무시(중복 과금 방지)
+  genBusy = true;
   lastPrompt = prompt;
   show("s-gen");
+  // s-gen 워치독: 90초가 지나도 여전히 s-gen 화면이면(apiGenerate의 70초 타임아웃보다도
+  // 더 걸린 이례적 상황 포함) 강제로 리뷰(에러) 화면으로 탈출시켜 재시도 버튼을 노출한다.
+  genWatchdog = setTimeout(() => {
+    genWatchdog = null;
+    if (currentScreen === "s-gen") renderReview(null, t("errTimeout"));
+  }, 90000);
   try {
     const url = await apiGenerate(prompt, "blocks");
     renderResult(url); // 리뷰 단계 없이 바로 결과(이미지+QR) 화면으로
@@ -363,6 +407,7 @@ async function runGenerate(prompt) {
   }
 }
 function renderReview(url, err) {
+  genBusy = false; // runGenerate 도달 지점 — 재시도 버튼으로 다시 runGenerate를 부를 수 있어야 함
   currentImageUrl = url;
   lastReview = { url, err };
   const s = document.getElementById("s-review");
@@ -393,6 +438,7 @@ function renderReviewButtons() {
 
 // ===================== 결과 + QR =====================
 function renderResult(url) {
+  genBusy = false; // runGenerate 도달 지점(성공)
   currentImageUrl = url;
   const qr = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=" + encodeURIComponent(url);
   const s = document.getElementById("s-result");

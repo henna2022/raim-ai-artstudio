@@ -62,21 +62,36 @@ export default async function handler(req, res) {
     const systemPrompt = describe ? DESCRIBE_PROMPT : (SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.ko);
     const convo = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
 
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.CHAT_MODEL || 'gpt-4.1-mini',
-        messages: [{ role: 'system', content: systemPrompt }, ...convo],
-        max_tokens: describe ? 260 : 160, // 출력 토큰 상한(짧은 답변이라 충분) — 폭주 방지
-        temperature: describe ? 0.5 : 0.8,
-        // 같은 시스템 프롬프트(=같은 접두부) 요청끼리 캐시를 공유하도록 키 지정.
-        // 주의: OpenAI 프롬프트 캐싱은 접두부가 1024토큰 이상일 때만 동작하는데, 현재 시스템
-        // 프롬프트는 그보다 훨씬 짧아 지금은 실효가 없다. 파라미터 자체는 무해하므로 남겨두고,
-        // 프롬프트가 길어져 1024토큰을 넘기면 그때 자동으로 캐싱 효과가 생긴다.
-        prompt_cache_key: describe ? 'raimi-describe' : `raimi-chat-${lang || 'ko'}`,
-      }),
-    });
+    // 챗 타임아웃(20초, AbortController) — generate.js와 동일 패턴. 네트워크가 응답을 안 주면
+    // 아이가 채팅 화면에 영원히 갇히므로, 타임아웃 시 기존 502 경로를 그대로 재사용한다.
+    const chatController = new AbortController();
+    const chatTimer = setTimeout(() => chatController.abort(), 20000);
+    let r;
+    try {
+      r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: process.env.CHAT_MODEL || 'gpt-4.1-mini',
+          messages: [{ role: 'system', content: systemPrompt }, ...convo],
+          max_tokens: describe ? 260 : 160, // 출력 토큰 상한(짧은 답변이라 충분) — 폭주 방지
+          temperature: describe ? 0.5 : 0.8,
+          // 같은 시스템 프롬프트(=같은 접두부) 요청끼리 캐시를 공유하도록 키 지정.
+          // 주의: OpenAI 프롬프트 캐싱은 접두부가 1024토큰 이상일 때만 동작하는데, 현재 시스템
+          // 프롬프트는 그보다 훨씬 짧아 지금은 실효가 없다. 파라미터 자체는 무해하므로 남겨두고,
+          // 프롬프트가 길어져 1024토큰을 넘기면 그때 자동으로 캐싱 효과가 생긴다.
+          prompt_cache_key: describe ? 'raimi-describe' : `raimi-chat-${lang || 'ko'}`,
+        }),
+        signal: chatController.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        return res.status(502).json({ error: '대화 생성에 실패했어요.' });
+      }
+      throw e;
+    } finally {
+      clearTimeout(chatTimer);
+    }
     const data = await r.json();
     if (!r.ok) return res.status(502).json({ error: data?.error?.message || '대화 생성에 실패했어요.' });
 
