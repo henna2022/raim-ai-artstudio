@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { addLogo } from './_watermark.js';
 import { uploadPublic, cleanupOld } from './_storage.js';
+import { checkPrompt } from './_filter.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -26,33 +27,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '그림 설명이 필요해요.' });
     }
 
-    const low = prompt.toLowerCase();
-
-    const banned = ['누드','나체','섹스','성인','야한','폭력','피','살해','죽이','자살','마약','담배','술','칼',
-                    'nude','naked','sex','sexual','nsfw','porn','blood','gore','kill','suicide','drug','weapon','gun','knife'];
-    if (banned.some((w) => low.includes(w.toLowerCase()))) {
-      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'banned' });
-      return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?' });
+    // 1차: 키워드 필터 (순수 함수, api/_filter.js — 재설계 내역은 해당 파일 참고)
+    const kwCheck = checkPrompt(prompt);
+    if (!kwCheck.ok) {
+      await logEvt('generate_blocked', { mode, lang, session_id, detail: kwCheck.reason });
+      const msg = kwCheck.reason === 'copyright'
+        ? '유명한 캐릭터나 사람은 그릴 수 없어요. 우리만의 새로운 친구를 만들어볼까요? 😊'
+        : '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?';
+      return res.status(400).json({ error: msg });
     }
 
-    // 저작권 보호: 유명 캐릭터/IP/유명인 등은 생성하지 않음 (오탐 적은 고유 명칭만 차단)
-    const copyrighted = [
-      // 캐릭터/IP (한글)
-      '포켓몬','피카츄','마리오','슈퍼마리오','루이지','소닉','디즈니','미키마우스','엘사','겨울왕국','라푼젤',
-      '스파이더맨','아이언맨','배트맨','슈퍼맨','헐크','어벤져스','캡틴아메리카','토토로','도라에몽','짱구',
-      '나루토','드래곤볼','유희왕','디지몬','세일러문','명탐정코난','뽀로로','핑크퐁',
-      '로보카폴리','둘리','펭수','잔망루피','카카오프렌즈','헬로키티','쿠로미','시나모롤','곰돌이푸','스누피',
-      '스폰지밥','미니언즈','심슨','마인크래프트','로블록스','어몽어스','쿠키런','브롤스타즈','방탄소년단','블랙핑크','뉴진스',
-      // 캐릭터/IP (영문)
-      'pokemon','pokémon','pikachu','super mario','luigi','bowser','disney','mickey mouse','frozen elsa','rapunzel',
-      'spider-man','spiderman','iron man','ironman','batman','superman','avengers','totoro','doraemon','naruto',
-      'dragon ball','yugioh','yu-gi-oh','digimon','sailor moon','pororo','pinkfong','hello kitty','kuromi',
-      'cinnamoroll','winnie the pooh','snoopy','spongebob','minecraft','roblox','among us','cookie run','brawl stars',
-      'blackpink','newjeans',
-    ];
-    if (copyrighted.some((w) => low.includes(w.toLowerCase()))) {
-      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'copyright' });
-      return res.status(400).json({ error: '유명한 캐릭터나 사람은 그릴 수 없어요. 우리만의 새로운 친구를 만들어볼까요? 😊' });
+    // 2차: 의미 기반 가드 (OpenAI Moderation). 실패/타임아웃 시 fail-open —
+    // 이미지 모델 자체의 안전장치가 있으므로 가용성을 우선한다.
+    if (await moderationBlocked(prompt)) {
+      await logEvt('generate_blocked', { mode, lang, session_id, detail: 'banned' });
+      return res.status(400).json({ error: '그건 그릴 수 없어요. 다른 멋진 걸 그려볼까요?' });
     }
 
     const safePrompt =
@@ -113,6 +102,37 @@ export default async function handler(req, res) {
     const reason = String(e?.message || e).slice(0, 100);
     await logEvt('generate_error', { mode, lang, session_id, detail: reason });
     return res.status(500).json({ error: e.message || '알 수 없는 오류' });
+  }
+}
+
+// 의미 기반 가드: OpenAI Moderation API. 키워드 필터를 통과한 프롬프트만 대상으로 호출한다.
+// 5초 타임아웃(AbortController) — 실패/타임아웃 시 통과(fail-open)시키고 console.error만 남긴다.
+// (generate_error 이벤트는 기록하지 않음 — 이건 생성 실패가 아니라 가드 자체의 문제이므로.)
+async function moderationBlocked(prompt) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const r = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: prompt }),
+      signal: controller.signal,
+    });
+    if (!r.ok) {
+      console.error('Moderation API 오류 응답:', r.status);
+      return false;
+    }
+    const data = await r.json();
+    const categories = data?.results?.[0]?.categories || {};
+    const watched = ['sexual', 'sexual/minors', 'violence'];
+    if (watched.some((c) => categories[c] === true)) return true;
+    if (Object.keys(categories).some((c) => c.startsWith('self-harm') && categories[c] === true)) return true;
+    return false;
+  } catch (e) {
+    console.error('Moderation 호출 실패(통과 처리):', e?.message || e);
+    return false; // fail-open — 이미지 모델 자체 안전장치 존재
+  } finally {
+    clearTimeout(timer);
   }
 }
 
