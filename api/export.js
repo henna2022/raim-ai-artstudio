@@ -3,6 +3,7 @@
 // 컬럼 없음. /api/stats 응답에는 이 원본 행을 절대 섞지 않는다(payload 비대 방지, 별도 엔드포인트).
 import { createClient } from '@supabase/supabase-js';
 import { windowStartISO, kstDateTime } from './_aggregate.js';
+import { checkAdminKey } from './_auth.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -32,6 +33,11 @@ function isMissingTable(e) {
 }
 
 export default async function handler(req, res) {
+  // R4 — 관리자 접근 보호: api/stats.js와 동일 정책(checkAdminKey 공유).
+  const authStatus = checkAdminKey(req.headers['x-admin-key'], process.env.ADMIN_KEY);
+  if (authStatus === 'unauthorized') {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
   try {
     const sinceISO = windowStartISO(Date.now(), 12);
 
@@ -56,7 +62,9 @@ export default async function handler(req, res) {
       events = [];
     }
 
-    return res.status(200).json({ generations, events });
+    const payload = { generations, events };
+    if (authStatus === 'unset') payload.warning = 'ADMIN_KEY 미설정';
+    return res.status(200).json(payload);
   } catch (e) {
     const code = e && e.code;
     let msg = (e && (e.message || e.details)) || '원본 데이터를 불러오지 못했어요.';

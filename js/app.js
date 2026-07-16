@@ -10,11 +10,12 @@ const API_BASE = "";
 const RAIMI_IMG = "assets/raimi.png"; // 라이미 로봇 이미지 (이 위치에 png 파일을 넣어주세요)
 
 // ===================== 관리자 대시보드 설정 =====================
-// 관리자 통계(?admin) 진입 PIN. 필요하면 이 값만 바꾸면 됩니다.
-// ⚠️ 이건 클라이언트 측 "소프트 게이트"일 뿐 진짜 보안이 아닙니다.
-//    소스가 브라우저로 그대로 내려가므로 누구나 볼 수 있습니다(민감 데이터 보호용이 아니라
-//    일반 관람객의 우발적 접근을 막는 용도). 실제 접근 제어는 서버(API)에서 해야 합니다.
-const ADMIN_PIN = "4300";
+// 관리자 통계(?admin) 진입 PIN의 진위 판정은 서버(api/_auth.js의 checkAdminKey, ADMIN_KEY
+// 환경변수)가 한다(R4). 여기 클라이언트에는 PIN 값을 두지 않는다 — 입력한 4자리를
+// sessionStorage["raimi-admin-key"]에 저장해두고 /api/stats·/api/export 호출 시 x-admin-key
+// 헤더로 실어 보낼 뿐이며, 서버가 401을 주면 그 값을 지우고 게이트로 되돌아간다.
+// (공용 기기이므로 localStorage가 아니라 sessionStorage — 탭을 닫으면 자동 만료.)
+const ADMIN_KEY_STORAGE = "raimi-admin-key";
 // 앱 버전(앱 정보 카드·업데이트 내역에 표시). 시맨틱 버전.
 const APP_VERSION = "2.0.0";
 // 버전별 업데이트 내역 — 실제 진행한 작업만 기록(가짜 기능 금지). 최신이 위.
@@ -560,14 +561,33 @@ document.getElementById("chatFinish").onclick = () => finishChat(false);
 function isAdminMode() {
   return /\badmin\b/.test(location.search) || location.hash.replace("#", "") === "admin";
 }
-// ?admin 진입 → PIN 게이트(세션 내 1회) 통과 후 대시보드 로드
+// ?admin 진입 → PIN 게이트(세션 내 1회) 통과 후 대시보드 로드.
+// 진위 판정은 서버가 하므로(R4) 여기서는 "키를 들고 있는가"만 본다 — 실제로 맞는 키인지는
+// loadAdminDashboard의 401 처리가 확인한다.
 async function showAdmin() {
   show("s-admin");
-  if (sessionStorage.getItem("raimi-admin-ok") === "1") {
+  if (sessionStorage.getItem(ADMIN_KEY_STORAGE)) {
     loadAdminDashboard();
   } else {
     renderAdminGate();
   }
+}
+
+// x-admin-key 헤더를 실은 fetch 옵션(키가 없으면 헤더 생략).
+function adminFetchOpts() {
+  const key = sessionStorage.getItem(ADMIN_KEY_STORAGE);
+  return key ? { headers: { "x-admin-key": key } } : undefined;
+}
+
+// 서버가 401(PIN 불일치)을 준 경우 공통 처리: 저장된 키를 지우고 게이트로 되돌아가
+// "PIN이 올바르지 않아요" + shake를 보여준다(기존 gateErr·shake UX 재사용).
+function adminGateReject() {
+  sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+  renderAdminGate();
+  const err = document.getElementById("gateErr");
+  const card = document.getElementById("gateCard");
+  if (err) err.textContent = "PIN이 올바르지 않아요.";
+  if (card) { card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake"); }
 }
 
 // PIN 게이트 화면(터치 키패드). 통과하면 sessionStorage에 표시해 세션 동안 재입력 없음.
@@ -584,20 +604,15 @@ function renderAdminGate() {
   let buf = "";
   const dots = document.getElementById("gateDots");
   const err = document.getElementById("gateErr");
-  const card = document.getElementById("gateCard");
   const drawDots = () => {
     dots.innerHTML = [0, 1, 2, 3].map(i => '<i class="' + (i < buf.length ? "on" : "") + '"></i>').join("");
   };
   drawDots();
+  // 4자리를 입력하면 진위 확인 없이 일단 저장하고 서버(loadAdminDashboard)에 물어본다.
+  // 틀렸으면 loadAdminDashboard가 401을 받아 adminGateReject()로 여기(게이트)로 되돌아온다.
   const check = () => {
-    if (buf === ADMIN_PIN) {
-      sessionStorage.setItem("raimi-admin-ok", "1");
-      loadAdminDashboard();
-    } else {
-      err.textContent = "PIN이 올바르지 않아요.";
-      card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
-      buf = ""; drawDots();
-    }
+    sessionStorage.setItem(ADMIN_KEY_STORAGE, buf);
+    loadAdminDashboard();
   };
   const press = (d) => {
     err.textContent = "";
@@ -623,7 +638,8 @@ async function loadAdminDashboard() {
   const el = document.getElementById("s-admin");
   el.innerHTML = '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">불러오는 중...</p></div>';
   try {
-    const r = await fetch(API_BASE + "/api/stats");
+    const r = await fetch(API_BASE + "/api/stats", adminFetchOpts());
+    if (r.status === 401) { adminGateReject(); return; }
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || "통계를 불러오지 못했어요.");
     renderAdmin(s);
@@ -760,6 +776,7 @@ function renderAdmin(s) {
 
   el.innerHTML =
     '<div class="dash fadeUp">' +
+      (s.warning ? '<div class="adminWarn">⚠️ ' + escHtml(s.warning) + ' — 서버가 인증 없이 통과시키고 있어요(Vercel 환경변수 ADMIN_KEY를 설정해 주세요).</div>' : '') +
       '<div class="dashHead">' +
         '<div class="dashTitle">AI 그림 연구소 이용자 통계</div>' +
         '<div class="dashSub">서울 로봇인공지능과학관 · 라이미의 AI 그림 연구소</div>' +
@@ -862,7 +879,8 @@ function exportMonthlyReport() {
 // 원본 데이터(.xlsx) — /api/export에서 12개월치 생성기록(+이벤트)을 받아 그대로 시트로
 async function exportRawData() {
   try {
-    const r = await fetch(API_BASE + "/api/export");
+    const r = await fetch(API_BASE + "/api/export", adminFetchOpts());
+    if (r.status === 401) { adminGateReject(); return; } // alert 대신 게이트로 복귀(스펙 R4)
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "원본 데이터를 불러오지 못했어요.");
     downloadXlsx("라이미-원본_" + kstYmd() + ".xlsx", buildExportSheets(data));

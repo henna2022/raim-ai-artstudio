@@ -1,6 +1,7 @@
 // 생성 통계: generations(+events) 테이블에서 최근 1년치를 읽어 KST 기준 대시보드/레포트 집계를 반환
 import { createClient } from '@supabase/supabase-js';
 import { aggregate, aggregateFunnel, aggregateFunnelDaily, windowStartISO } from './_aggregate.js';
+import { checkAdminKey } from './_auth.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -30,6 +31,12 @@ function isMissingTable(e) {
 }
 
 export default async function handler(req, res) {
+  // R4 — 관리자 접근 보호: x-admin-key 헤더가 ADMIN_KEY와 다르면 401. ADMIN_KEY가 아예
+  // 설정돼 있지 않으면(배포 순서 사고 방지 위해) fail-open으로 통과시키되 응답에 warning을 얹는다.
+  const authStatus = checkAdminKey(req.headers['x-admin-key'], process.env.ADMIN_KEY);
+  if (authStatus === 'unauthorized') {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
   try {
     // 월별 12개월 분석을 정확히 커버하는 시작점(12개월 전 1일, KST)
     const sinceISO = windowStartISO(Date.now(), 12);
@@ -49,6 +56,7 @@ export default async function handler(req, res) {
     stats.funnel = aggregateFunnel(events, Date.now());
     // 최근 14일 일별 퍼널 — events 테이블이 없으면 위에서 events=[]로 처리되어 0으로 채운 14일이 나감
     stats.funnelDaily = aggregateFunnelDaily(events, Date.now());
+    if (authStatus === 'unset') stats.warning = 'ADMIN_KEY 미설정';
     return res.status(200).json(stats);
   } catch (e) {
     const code = e && e.code;

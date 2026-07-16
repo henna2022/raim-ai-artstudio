@@ -192,6 +192,8 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .dashHead{margin:2px 0 16px;}
 .dashTitle{font-size:30px;font-weight:800;color:#24406e;letter-spacing:-.5px;line-height:1.15;}
 .dashSub{font-size:15px;color:#5a6a8a;margin-top:4px;}
+/* ADMIN_KEY 미설정 경고(R4) — 서버가 fail-open으로 통과시켰다는 뜻이므로 눈에 띄게 표시 */
+.adminWarn{background:#fff3cd;color:#8a6100;border:1px solid #f3d98a;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:800;margin-bottom:12px;}
 
 /* PIN 게이트 */
 .adminGate{display:flex;align-items:center;justify-content:center;min-height:620px;}
