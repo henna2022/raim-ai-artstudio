@@ -1,7 +1,8 @@
-import { I18N } from "./i18n.js?v=32";
-import { downloadXlsx } from "./xlsx-mini.js?v=32";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=32";
-import { buildKpis } from "./dashboard-data.js?v=32";
+import { I18N } from "./i18n.js?v=33";
+import { downloadXlsx } from "./xlsx-mini.js?v=33";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=33";
+import { buildKpis } from "./dashboard-data.js?v=33";
+import { qrSvg } from "./qr-mini.js?v=33";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -445,10 +446,21 @@ function renderReviewButtons() {
 }
 
 // ===================== 결과 + QR =====================
+// QR은 js/qr-mini.js로 로컬 생성(R8) — 외부 서비스(qrserver) 장애·오프라인에도 QR이 살아 있고,
+// 생성물 URL을 제3자에 보내지 않는다. 만약 로컬 생성이 실패하면(예: URL이 비정상적으로 긺)
+// 종전의 qrserver 폴백을 쓴다 — QR 없이 끝나는 것보다는 외부 의존이 낫다.
+function qrSrc(url) {
+  try {
+    return "data:image/svg+xml;utf8," + encodeURIComponent(qrSvg(url));
+  } catch (e) {
+    console.error("로컬 QR 생성 실패, qrserver 폴백:", e?.message || e);
+    return "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=" + encodeURIComponent(url);
+  }
+}
 function renderResult(url) {
   genBusy = false; // runGenerate 도달 지점(성공)
   currentImageUrl = url;
-  const qr = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=" + encodeURIComponent(url);
+  const qr = qrSrc(url);
   const s = document.getElementById("s-result");
   s.innerHTML =
     '<div class="fadeUp center"><h2 class="reviewH2">' + t("resultH2") + "</h2>" +

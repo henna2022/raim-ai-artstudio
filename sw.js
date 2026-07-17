@@ -1,6 +1,6 @@
 // AI 그림 연구소 PWA 서비스 워커
 // 전략: same-origin GET은 network-first (온라인이면 항상 최신, 오프라인이면 캐시 폴백)
-const CACHE = "raim-cache-v32";
+const CACHE = "raim-cache-v33";
 const CORE = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const CORE = [
   "./js/app.js",
   "./js/i18n.js",
   "./js/xlsx-mini.js",
+  "./js/qr-mini.js",
   "./js/report.js",
   "./js/dashboard-data.js",
   "./manifest.json",
@@ -40,7 +41,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return; // API(POST) 등은 그대로 통과
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return; // 폰트·QR 등 외부 요청은 캐시하지 않음
+  if (url.origin !== location.origin) return; // 외부 요청(R2 생성물 이미지 등)은 캐시하지 않음
   if (url.pathname.startsWith("/api/")) return; // API는 항상 네트워크로(오래된 통계 캐시 방지)
 
   e.respondWith(
