@@ -1,3 +1,10 @@
+/* 페이퍼로지(Paperlogy) — 자체 호스팅(assets/fonts, OFL). 키오스크가 오프라인이어도 폰트가
+   깨지지 않도록 CDN 대신 로컬 파일 + sw.js CORE 프리캐시를 쓴다. */
+@font-face{font-family:'Paperlogy';src:url('../assets/fonts/Paperlogy-4Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:'Paperlogy';src:url('../assets/fonts/Paperlogy-5Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap;}
+@font-face{font-family:'Paperlogy';src:url('../assets/fonts/Paperlogy-7Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap;}
+@font-face{font-family:'Paperlogy';src:url('../assets/fonts/Paperlogy-8ExtraBold.woff2') format('woff2');font-weight:800;font-style:normal;font-display:swap;}
+
 :root{
   --ink:#3a2e4a; --sub:#8a7a9b;
   --pink:#ff8fc0; --pinkD:#e85ba0;
@@ -13,7 +20,7 @@ input,textarea{
   -webkit-touch-callout:default;}
 html,body{margin:0;height:100%;}
 body{
-  font-family:'Pretendard','Gaegu','Jua',sans-serif; color:var(--ink);
+  font-family:'Paperlogy','Pretendard',sans-serif; color:var(--ink);
   background:linear-gradient(160deg,#eaf2ff 0%,#dbe9ff 50%,#eef6ff 100%);
   overflow:hidden; -webkit-tap-highlight-color:transparent;
   height:100vh; position:relative;

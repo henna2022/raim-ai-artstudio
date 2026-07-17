@@ -1,6 +1,6 @@
 // AI 그림 연구소 PWA 서비스 워커
 // 전략: same-origin GET은 network-first (온라인이면 항상 최신, 오프라인이면 캐시 폴백)
-const CACHE = "raim-cache-v31";
+const CACHE = "raim-cache-v32";
 const CORE = [
   "./",
   "./index.html",
@@ -15,6 +15,11 @@ const CORE = [
   "./assets/raimi.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
+  // 페이퍼로지 폰트(자체 호스팅) — 오프라인에서도 글꼴 유지
+  "./assets/fonts/Paperlogy-4Regular.woff2",
+  "./assets/fonts/Paperlogy-5Medium.woff2",
+  "./assets/fonts/Paperlogy-7Bold.woff2",
+  "./assets/fonts/Paperlogy-8ExtraBold.woff2",
 ];
 
 self.addEventListener("install", (e) => {
