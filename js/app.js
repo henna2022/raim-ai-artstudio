@@ -1,7 +1,7 @@
-import { I18N } from "./i18n.js?v=14";
-import { downloadXlsx } from "./xlsx-mini.js?v=2";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=6";
-import { buildKpis } from "./dashboard-data.js?v=1";
+import { I18N } from "./i18n.js?v=31";
+import { downloadXlsx } from "./xlsx-mini.js?v=31";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=31";
+import { buildKpis } from "./dashboard-data.js?v=31";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -243,7 +243,7 @@ function logEvent(type, extra) {
       return;
     }
     fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true })
-      .catch(() => {});
+      .catch((err) => { console.error("logEvent fetch failed:", err); });
   } catch (_) { /* 로깅 실패가 UX를 막으면 안 됨 */ }
 }
 
@@ -300,7 +300,7 @@ async function apiGenerate(prompt, mode) {
   } finally {
     clearTimeout(timer);
   }
-  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "생성 실패"); }
+  if (!r.ok) { const e = await r.json().catch((err) => { console.error("apiGenerate JSON parse failed:", err); return {}; }); throw new Error(e.error || "생성 실패"); }
   return (await r.json()).url;
 }
 async function apiChat(messages, mode) {
@@ -320,7 +320,7 @@ async function apiChat(messages, mode) {
   } finally {
     clearTimeout(timer);
   }
-  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "대화 실패"); }
+  if (!r.ok) { const e = await r.json().catch((err) => { console.error("apiChat JSON parse failed:", err); return {}; }); throw new Error(e.error || "대화 실패"); }
   return (await r.json()).reply;
 }
 
@@ -512,6 +512,9 @@ async function sendChat() {
     const reply = await apiChat(chatMessages.filter(m => m.role !== "system"));
     chatMessages.push({ role: "assistant", content: reply });
   } catch (e) {
+    // 실패: 방금 push한 user 메시지를 pop해 턴을 돌려주고, 입력창에 원문 복원
+    chatMessages.pop();
+    inp.value = text;
     chatMessages.push({ role: "assistant", content: t("chatError") });
   }
   chatBusy = false;
@@ -636,6 +639,8 @@ function renderAdminGate() {
 
 async function loadAdminDashboard() {
   const el = document.getElementById("s-admin");
+  const rfB = document.getElementById("exportRefresh");
+  if (rfB) rfB.disabled = true; // 새로고침 버튼 비활성화
   el.innerHTML = '<div class="fadeUp center" style="padding-top:80px"><p class="adminMsg">불러오는 중...</p></div>';
   try {
     const r = await fetch(API_BASE + "/api/stats", adminFetchOpts());
@@ -649,6 +654,9 @@ async function loadAdminDashboard() {
       '<div class="exportBtns" style="justify-content:center;margin-top:16px"><button class="pillBtn" id="adminRetry">🔄 다시 시도</button></div></div>';
     const b = document.getElementById("adminRetry");
     if (b) b.onclick = loadAdminDashboard;
+  } finally {
+    const rfBFinal = document.getElementById("exportRefresh");
+    if (rfBFinal) rfBFinal.disabled = false; // 새로고침 버튼 재활성화
   }
 }
 
@@ -861,10 +869,33 @@ function kstYmd() {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
+// 내보내기류 버튼 공통: 작업 중 라벨을 "준비 중..."으로 바꾸고 disabled, 끝나면 원복.
+// xlsx 생성은 동기적이라 setTimeout(30ms)으로 한 프레임 미뤄 라벨이 실제로 페인트되게 한다.
+// fn이 Promise를 돌려주면(async) 정착 후에 원복한다. 버튼이 없어도 fn은 실행된다.
+function withBtnBusy(btnId, fn) {
+  const btn = document.getElementById(btnId);
+  if (!btn) { fn(); return; }
+  const origLabel = btn.textContent;
+  btn.textContent = "준비 중...";
+  btn.disabled = true;
+  const restore = () => { btn.textContent = origLabel; btn.disabled = false; };
+  setTimeout(() => {
+    try {
+      const p = fn();
+      if (p && typeof p.finally === "function") p.finally(restore);
+      else restore();
+    } catch (e) {
+      restore();
+      throw e;
+    }
+  }, 30);
+}
+
 // 현재 통계 스냅샷을 엑셀로 — 화면에 보이는 기간별 요약 + 일/주/월 표
 function exportAdminXlsx() {
   if (!adminStats) return;
-  downloadXlsx("라이미-통계_" + kstYmd() + ".xlsx", buildSnapshotSheets(adminStats, kstStamp()));
+  withBtnBusy("exportExcel", () =>
+    downloadXlsx("라이미-통계_" + kstYmd() + ".xlsx", buildSnapshotSheets(adminStats, kstStamp())));
 }
 
 // 월간 보고서(.xlsx) — 대상 월(select#reportMonth) 하나를 골라 그 달의 상세 + 12개월 개요
@@ -873,20 +904,23 @@ function exportMonthlyReport() {
   const rm = document.getElementById("reportMonth");
   const targetMonth = (rm && rm.value) || defaultReportMonth(adminStats.report || [], kstYmd());
   if (!targetMonth) return; // 표시할 달이 없음(report 비어 있음)
-  downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth, kstStamp()));
+  withBtnBusy("exportExcel", () =>
+    downloadXlsx("라이미-월간보고서_" + targetMonth + ".xlsx", buildMonthlyReportSheets(adminStats, kstYmd(), targetMonth, kstStamp())));
 }
 
 // 원본 데이터(.xlsx) — /api/export에서 12개월치 생성기록(+이벤트)을 받아 그대로 시트로
-async function exportRawData() {
-  try {
-    const r = await fetch(API_BASE + "/api/export", adminFetchOpts());
-    if (r.status === 401) { adminGateReject(); return; } // alert 대신 게이트로 복귀(스펙 R4)
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || "원본 데이터를 불러오지 못했어요.");
-    downloadXlsx("라이미-원본_" + kstYmd() + ".xlsx", buildExportSheets(data));
-  } catch (e) {
-    alert("오류: " + e.message); // 관리자 전용 화면(?admin) — 별도 에러 UI 없이 alert로 충분
-  }
+function exportRawData() {
+  withBtnBusy("exportRaw", async () => {
+    try {
+      const r = await fetch(API_BASE + "/api/export", adminFetchOpts());
+      if (r.status === 401) { adminGateReject(); return; } // alert 대신 게이트로 복귀(스펙 R4)
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "원본 데이터를 불러오지 못했어요.");
+      downloadXlsx("라이미-원본_" + kstYmd() + ".xlsx", buildExportSheets(data));
+    } catch (e) {
+      alert("오류: " + e.message); // 관리자 전용 화면(?admin) — 별도 에러 UI 없이 alert로 충분
+    }
+  });
 }
 
 // 홈 화면에 설치된 standalone PWA인지(iPad standalone에서는 print가 동작하지 않을 수 있음)
