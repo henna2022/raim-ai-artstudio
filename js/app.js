@@ -1,8 +1,8 @@
-import { I18N } from "./i18n.js?v=33";
-import { downloadXlsx } from "./xlsx-mini.js?v=33";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=33";
-import { buildKpis } from "./dashboard-data.js?v=33";
-import { qrSvg } from "./qr-mini.js?v=33";
+import { I18N } from "./i18n.js?v=34";
+import { downloadXlsx } from "./xlsx-mini.js?v=34";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=34";
+import { buildKpis } from "./dashboard-data.js?v=34";
+import { qrSvg } from "./qr-mini.js?v=34";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.

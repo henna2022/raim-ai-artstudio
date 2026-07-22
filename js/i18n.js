@@ -33,7 +33,7 @@ export const I18N = {
     cardBlocksTitle: "블록으로 만들기",
     cardBlocksDesc: "버튼을 톡톡 골라서<br>쉽고 빠르게 그림 완성!",
     cardBlocksTag: "쉬워요",
-    cardChatTitle: "대화하며 만들기",
+    cardChatTitle: "채팅으로 만들기",
     cardChatDesc: "라이미와 이야기하며<br>내 맘대로 그림 만들기!",
     cardChatTag: "자유로워요",
 
@@ -178,7 +178,7 @@ export const I18N = {
     cardBlocksTag: "Easy",
     cardChatTitle: "Make it by chatting",
     cardChatDesc: "Chat with Raimi and<br>make any picture you want!",
-    cardChatTag: "Free & fun",
+    cardChatTag: "Fun & creative",
 
     chatHeader: "Chat with Raimi, your art buddy",
     chatPlaceholder: "Type here...",
