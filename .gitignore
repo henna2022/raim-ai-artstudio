@@ -7,3 +7,6 @@ assets/_orig
 .DS_Store
 
 .claude/
+
+# 자격증명 포함 인수인계 문서 — 절대 커밋 금지
+docs/*인수인계*
