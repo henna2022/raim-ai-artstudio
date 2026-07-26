@@ -239,7 +239,20 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .hChart .gridLine{stroke:#e6edf8;stroke-width:1;stroke-dasharray:3 4;}
 .hChart .yLabel{fill:#94a3bb;font-size:13px;text-anchor:end;font-family:inherit;}
 .hChart .xLabel{fill:#94a3bb;font-size:13px;text-anchor:middle;font-family:inherit;}
-.hChart .hBar{fill:url(#hBarGrad);}
+.hChart .hBar{cursor:pointer;transition:opacity .12s;}
+.hChart .hBar.active{opacity:.72;}
+/* 막대 차트 커스텀 툴팁(시간대별·일별 공통) — hover(데스크톱)·탭(터치) 모두 대응 */
+.chartWrap{position:relative;}
+.cTip{position:absolute;left:0;top:0;z-index:5;pointer-events:none;opacity:0;transform:translateY(4px);
+  transition:opacity .12s,transform .12s;background:#24406e;color:#fff;border-radius:12px;
+  padding:8px 12px;box-shadow:0 6px 18px rgba(36,64,110,.28);white-space:nowrap;
+  display:flex;flex-direction:column;gap:1px;line-height:1.35;}
+.cTip.on{opacity:1;transform:translateY(0);}
+.cTip::after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#24406e;border-bottom:0;}
+.cTipLabel{font-size:13px;font-weight:700;opacity:.85;}
+.cTipVal{font-size:19px;font-weight:800;}
+.cTipShare{font-size:12px;opacity:.75;}
 
 /* 분석 인사이트 */
 .insightCard{background:linear-gradient(160deg,#eaf2ff,#dbe9ff);border-radius:22px;padding:20px 22px;box-shadow:0 8px 0 rgba(120,150,210,.16);margin-bottom:16px;}

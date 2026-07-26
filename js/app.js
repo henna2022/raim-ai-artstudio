@@ -1,8 +1,8 @@
-import { I18N } from "./i18n.js?v=34";
-import { downloadXlsx } from "./xlsx-mini.js?v=34";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=34";
-import { buildKpis } from "./dashboard-data.js?v=34";
-import { qrSvg } from "./qr-mini.js?v=34";
+import { I18N } from "./i18n.js?v=36";
+import { downloadXlsx } from "./xlsx-mini.js?v=36";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=36";
+import { buildKpis } from "./dashboard-data.js?v=36";
+import { qrSvg } from "./qr-mini.js?v=36";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -694,15 +694,19 @@ function niceStep(maxCount) {
   const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
   return nice * mag;
 }
-// 시간대별(0~23시) 그림 생성 수 — 순수 인라인 SVG 막대 차트(외부 라이브러리 없음).
-// y축 눈금 + 점선 그리드 + x축 시각 라벨(2시간 간격) + 블루 그라데이션 막대 + hover 툴팁(<title>).
-function hourlyChartSVG(hourly) {
-  const data = Array.isArray(hourly) ? hourly : [];
-  if (!data.length) return '<p class="adminMsg">아직 기록이 없어요.</p>';
+// 막대 차트(순수 인라인 SVG, 외부 라이브러리 없음) — 시간대별·일별이 공유한다.
+// y축 눈금 + 점선 그리드 + 그라데이션 막대 + x축 라벨(opts.xLabelFn). 막대엔 data-* 속성만 심고,
+// hover/탭 툴팁은 wireBarCharts가 붙인다. data.share가 있으면 툴팁에 비율 줄이 추가된다.
+// opts: { gradId, ariaLabel, xLabelFn(i,d)->라벨문자열|null }
+function barChartSVG(data, opts) {
+  const o = opts || {};
+  const gradId = o.gradId || "barGrad";
+  const rows = Array.isArray(data) ? data : [];
+  if (!rows.length) return '<p class="adminMsg">아직 기록이 없어요.</p>';
   const W = 1040, H = 280, padL = 46, padR = 16, padT = 14, padB = 34;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const n = data.length;
-  const maxCount = Math.max(1, ...data.map(d => d.count));
+  const n = rows.length;
+  const maxCount = Math.max(1, ...rows.map(d => d.count));
   const step = niceStep(maxCount), niceMax = step * 4, ticks = 4;
   let grid = "";
   for (let i = 0; i <= ticks; i++) {
@@ -714,21 +718,89 @@ function hourlyChartSVG(hourly) {
   const bandW = plotW / n;
   const barW = Math.min(26, bandW * 0.62);
   let bars = "";
-  data.forEach((d, i) => {
+  rows.forEach((d, i) => {
     const x = padL + bandW * i + (bandW - barW) / 2;
     const h = (d.count / niceMax) * plotH;
     const y = padT + plotH - h;
+    const shareAttr = (d.share === undefined || d.share === null) ? "" : ' data-share="' + d.share + '"';
+    // 툴팁 수치는 wireBarCharts가 data-* 를 읽어 표시한다(터치에서 안 뜨는 <title> 대신).
     bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
-      '" height="' + Math.max(0, h).toFixed(1) + '" rx="4" class="hBar">' +
-      '<title>' + escHtml(d.label) + ' · ' + d.count + '건 (' + d.share + '%)</title></rect>';
-    if (i % 2 === 0) {
-      bars += '<text x="' + (padL + bandW * i + bandW / 2).toFixed(1) + '" y="' + (H - 12) + '" class="xLabel">' + i + '</text>';
+      '" height="' + Math.max(0, h).toFixed(1) + '" rx="4" class="hBar" fill="url(#' + gradId + ')"' +
+      ' data-label="' + escHtml(d.label) + '" data-count="' + d.count + '"' + shareAttr + '/>';
+    const xl = o.xLabelFn ? o.xLabelFn(i, d) : null;
+    if (xl !== null && xl !== undefined && xl !== "") {
+      bars += '<text x="' + (padL + bandW * i + bandW / 2).toFixed(1) + '" y="' + (H - 12) + '" class="xLabel">' + escHtml(String(xl)) + '</text>';
     }
   });
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="hChart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="시간대별 그림 생성 수">' +
-    '<defs><linearGradient id="hBarGrad" x1="0" y1="0" x2="0" y2="1">' +
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="hChart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + escHtml(o.ariaLabel || "막대 차트") + '">' +
+    '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
     '<stop offset="0" stop-color="#7ea8ff"/><stop offset="1" stop-color="#5182f0"/></linearGradient></defs>' +
     grid + bars + '</svg>';
+}
+
+// 시간대별(0~23시): x축은 2시간 간격의 시각 숫자, 툴팁엔 비율(share) 포함.
+function hourlyChartSVG(hourly) {
+  return barChartSVG(hourly, {
+    gradId: "hBarGrad",
+    ariaLabel: "시간대별 그림 생성 수",
+    xLabelFn: (i) => (i % 2 === 0 ? String(i) : null),
+  });
+}
+
+// 일별(최근 기록일): daily는 최신순 14개 활동일이라 그래프용으로 뒤집어 과거→현재로 놓는다.
+// x축 라벨은 요일 없이 날짜(MM/DD)만, 막대가 많으면 한 칸 걸러 표시한다.
+function dailyChartSVG(daily) {
+  const arr = Array.isArray(daily) ? daily.slice().reverse() : [];
+  const every = arr.length > 10 ? 2 : 1;
+  return barChartSVG(arr, {
+    gradId: "dBarGrad",
+    ariaLabel: "일별 그림 생성 수",
+    xLabelFn: (i, d) => (i % every === 0 ? String(d.label).split("(")[0] : null),
+  });
+}
+
+// 막대 차트 인터랙션(시간대별·일별 공통): 막대에 hover(데스크톱) 또는 탭(아이패드 등 터치)하면
+// 정확한 수치를 커스텀 툴팁으로 표시한다. SVG 기본 <title>은 터치 기기에서 안 뜨고 데스크톱에서도
+// 느려서, pointer 이벤트(마우스·터치·펜 공통)로 직접 배선한다. .chartWrap 마다 자기 .cTip을 쓴다.
+function wireBarCharts() {
+  document.querySelectorAll(".chartWrap").forEach((wrap) => {
+    const svg = wrap.querySelector("svg.hChart");
+    const tip = wrap.querySelector(".cTip");
+    if (!svg || !tip) return;
+
+    const hide = () => {
+      tip.classList.remove("on");
+      svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
+    };
+    const show = (bar, clientX, clientY) => {
+      const count = Number(bar.getAttribute("data-count") || 0);
+      const hasShare = bar.hasAttribute("data-share");
+      tip.innerHTML =
+        '<span class="cTipLabel">' + escHtml(bar.getAttribute("data-label") || "") + "</span>" +
+        '<span class="cTipVal">' + count.toLocaleString("ko-KR") + "건</span>" +
+        (hasShare ? '<span class="cTipShare">전체의 ' + escHtml(bar.getAttribute("data-share") || "0") + "%</span>" : "");
+      tip.classList.add("on");
+      svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
+      bar.classList.add("active");
+      // 포인터 위 중앙에 띄우고, 카드 밖으로 나가지 않게 클램프
+      const r = wrap.getBoundingClientRect();
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let left = clientX - r.left - tw / 2;
+      left = Math.max(6, Math.min(left, r.width - tw - 6));
+      let top = clientY - r.top - th - 12;
+      if (top < 4) top = clientY - r.top + 18; // 위 공간 부족하면 아래로
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+    };
+    const at = (e) => {
+      const bar = e.target.closest && e.target.closest(".hBar");
+      if (bar) show(bar, e.clientX, e.clientY);
+      else hide();
+    };
+    svg.addEventListener("pointermove", at);
+    svg.addEventListener("pointerdown", at);
+    svg.addEventListener("pointerleave", hide);
+  });
 }
 
 function renderInsight() {
@@ -808,8 +880,11 @@ function renderAdmin(s) {
         kpiCard("오늘 그림 생성 수", k.todayGen, k.vsYesterdayGenPct, "어제 대비") +
       '</div>' +
 
-      '<div class="dashCard"><div class="dashCardTitle">시간대별 그림 생성 수 (한국시간)</div>' +
-        hourlyChartSVG(s.hourly) + '</div>' +
+      '<div class="dashCard chartWrap"><div class="dashCardTitle">일별 그림 생성 수 (최근 기록일 · 한국시간)</div>' +
+        dailyChartSVG(s.daily) + '<div class="cTip" aria-hidden="true"></div></div>' +
+
+      '<div class="dashCard chartWrap"><div class="dashCardTitle">시간대별 그림 생성 수 (한국시간)</div>' +
+        hourlyChartSVG(s.hourly) + '<div class="cTip" aria-hidden="true"></div></div>' +
 
       '<div class="insightCard"><div class="insightHead">✨ 분석 인사이트</div>' +
         '<div class="insightText" id="insightText"></div>' +
@@ -867,6 +942,7 @@ function renderAdmin(s) {
   el.querySelectorAll(".logHead").forEach(h =>
     h.onclick = () => h.parentElement.classList.toggle("open"));
 
+  wireBarCharts();
   syncExport();
 }
 
