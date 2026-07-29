@@ -1,6 +1,6 @@
 // AI 그림 연구소 PWA 서비스 워커
 // 전략: same-origin GET은 network-first (온라인이면 항상 최신, 오프라인이면 캐시 폴백)
-const CACHE = "raim-cache-v36";
+const CACHE = "raim-cache-v37";
 const CORE = [
   "./",
   "./index.html",

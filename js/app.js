@@ -1,8 +1,8 @@
-import { I18N } from "./i18n.js?v=36";
-import { downloadXlsx } from "./xlsx-mini.js?v=36";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=36";
-import { buildKpis } from "./dashboard-data.js?v=36";
-import { qrSvg } from "./qr-mini.js?v=36";
+import { I18N } from "./i18n.js?v=37";
+import { downloadXlsx } from "./xlsx-mini.js?v=37";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=37";
+import { buildKpis } from "./dashboard-data.js?v=37";
+import { qrSvg } from "./qr-mini.js?v=37";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -18,9 +18,12 @@ const RAIMI_IMG = "assets/raimi.png"; // 라이미 로봇 이미지 (이 위치�
 // (공용 기기이므로 localStorage가 아니라 sessionStorage — 탭을 닫으면 자동 만료.)
 const ADMIN_KEY_STORAGE = "raimi-admin-key";
 // 앱 버전(앱 정보 카드·업데이트 내역에 표시). 시맨틱 버전.
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 // 버전별 업데이트 내역 — 실제 진행한 작업만 기록(가짜 기능 금지). 최신이 위.
 const CHANGELOG = [
+  { version: "2.1.0", date: "2026-07", items: [
+    "그림 생성 수 차트에 일별·주별·월별 전환 탭 추가",
+  ] },
   { version: "2.0.0", date: "2026-07", items: [
     "관리자 통계 화면 대시보드로 전면 개편(KPI·시간대별 차트·분석 인사이트)",
     "시간대별 그림 생성 수 막대 차트 추가(순수 SVG, 외부 라이브러리 없음)",
@@ -674,6 +677,7 @@ async function loadAdminDashboard() {
 
 let adminStats = null;
 let exportPeriod = "daily";        // 설정/내보내기 세그먼트: daily | weekly | monthly
+let genPeriod = "daily";           // 생성 수 차트 세그먼트: daily | weekly | monthly (내보내기와 별개 상태)
 let adminInsights = [];            // buildInsights 결과(규칙 기반 문자열들)
 let adminInsightIdx = 0;
 
@@ -759,48 +763,92 @@ function dailyChartSVG(daily) {
   });
 }
 
+// 주별(최근 기록 주): weekly는 최신순 12개 → 뒤집어 과거→현재.
+// 라벨 "MM/DD~MM/DD"는 길어서 x축엔 주 시작일(월요일)만, 전체 범위는 툴팁(data-label)에 남긴다.
+function weeklyChartSVG(weekly) {
+  const arr = Array.isArray(weekly) ? weekly.slice().reverse() : [];
+  return barChartSVG(arr, {
+    gradId: "wBarGrad",
+    ariaLabel: "주별 그림 생성 수",
+    xLabelFn: (i, d) => String(d.label).split("~")[0],
+  });
+}
+
+// 월별(최근 기록 월): monthly는 최신순 12개 → 뒤집어 과거→현재. 라벨은 "YYYY.MM" 그대로.
+function monthlyChartSVG(monthly) {
+  const arr = Array.isArray(monthly) ? monthly.slice().reverse() : [];
+  return barChartSVG(arr, {
+    gradId: "mBarGrad",
+    ariaLabel: "월별 그림 생성 수",
+    xLabelFn: (i, d) => String(d.label),
+  });
+}
+
+// 생성 수 차트 기간별 구성 — 제목·캡션·SVG 빌더
+const GEN_CHART = {
+  daily: { title: "일별 그림 생성 수", cap: "최근 기록일 · 한국시간", svg: (s) => dailyChartSVG(s.daily) },
+  weekly: { title: "주별 그림 생성 수", cap: "최근 기록 주 · 월~일 · 한국시간", svg: (s) => weeklyChartSVG(s.weekly) },
+  monthly: { title: "월별 그림 생성 수", cap: "최근 12개월 · 한국시간", svg: (s) => monthlyChartSVG(s.monthly) },
+};
+
+// 생성 수 차트 카드(제목·활성 탭·SVG)를 genPeriod에 맞춰 다시 그린다.
+// innerHTML 교체로 이전 SVG의 리스너는 함께 버려지므로 해당 카드만 다시 배선한다.
+function renderGenChart() {
+  const cfg = GEN_CHART[genPeriod] || GEN_CHART.daily;
+  const t = document.getElementById("genChartTitle");
+  if (t) t.textContent = cfg.title + " (" + cfg.cap + ")";
+  document.querySelectorAll("#genChartSeg .segBtn").forEach(b =>
+    b.classList.toggle("active", b.dataset.gperiod === genPeriod));
+  const body = document.getElementById("genChartBody");
+  if (!body || !adminStats) return;
+  body.innerHTML = cfg.svg(adminStats);
+  const wrap = body.closest(".chartWrap");
+  if (wrap) wireBarChart(wrap);
+}
+
 // 막대 차트 인터랙션(시간대별·일별 공통): 막대에 hover(데스크톱) 또는 탭(아이패드 등 터치)하면
 // 정확한 수치를 커스텀 툴팁으로 표시한다. SVG 기본 <title>은 터치 기기에서 안 뜨고 데스크톱에서도
 // 느려서, pointer 이벤트(마우스·터치·펜 공통)로 직접 배선한다. .chartWrap 마다 자기 .cTip을 쓴다.
 function wireBarCharts() {
-  document.querySelectorAll(".chartWrap").forEach((wrap) => {
-    const svg = wrap.querySelector("svg.hChart");
-    const tip = wrap.querySelector(".cTip");
-    if (!svg || !tip) return;
+  document.querySelectorAll(".chartWrap").forEach(wireBarChart);
+}
+function wireBarChart(wrap) {
+  const svg = wrap.querySelector("svg.hChart");
+  const tip = wrap.querySelector(".cTip");
+  if (!svg || !tip) return;
 
-    const hide = () => {
-      tip.classList.remove("on");
-      svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
-    };
-    const show = (bar, clientX, clientY) => {
-      const count = Number(bar.getAttribute("data-count") || 0);
-      const hasShare = bar.hasAttribute("data-share");
-      tip.innerHTML =
-        '<span class="cTipLabel">' + escHtml(bar.getAttribute("data-label") || "") + "</span>" +
-        '<span class="cTipVal">' + count.toLocaleString("ko-KR") + "건</span>" +
-        (hasShare ? '<span class="cTipShare">전체의 ' + escHtml(bar.getAttribute("data-share") || "0") + "%</span>" : "");
-      tip.classList.add("on");
-      svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
-      bar.classList.add("active");
-      // 포인터 위 중앙에 띄우고, 카드 밖으로 나가지 않게 클램프
-      const r = wrap.getBoundingClientRect();
-      const tw = tip.offsetWidth, th = tip.offsetHeight;
-      let left = clientX - r.left - tw / 2;
-      left = Math.max(6, Math.min(left, r.width - tw - 6));
-      let top = clientY - r.top - th - 12;
-      if (top < 4) top = clientY - r.top + 18; // 위 공간 부족하면 아래로
-      tip.style.left = left + "px";
-      tip.style.top = top + "px";
-    };
-    const at = (e) => {
-      const bar = e.target.closest && e.target.closest(".hBar");
-      if (bar) show(bar, e.clientX, e.clientY);
-      else hide();
-    };
-    svg.addEventListener("pointermove", at);
-    svg.addEventListener("pointerdown", at);
-    svg.addEventListener("pointerleave", hide);
-  });
+  const hide = () => {
+    tip.classList.remove("on");
+    svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
+  };
+  const show = (bar, clientX, clientY) => {
+    const count = Number(bar.getAttribute("data-count") || 0);
+    const hasShare = bar.hasAttribute("data-share");
+    tip.innerHTML =
+      '<span class="cTipLabel">' + escHtml(bar.getAttribute("data-label") || "") + "</span>" +
+      '<span class="cTipVal">' + count.toLocaleString("ko-KR") + "건</span>" +
+      (hasShare ? '<span class="cTipShare">전체의 ' + escHtml(bar.getAttribute("data-share") || "0") + "%</span>" : "");
+    tip.classList.add("on");
+    svg.querySelectorAll(".hBar.active").forEach((b) => b.classList.remove("active"));
+    bar.classList.add("active");
+    // 포인터 위 중앙에 띄우고, 카드 밖으로 나가지 않게 클램프
+    const r = wrap.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = clientX - r.left - tw / 2;
+    left = Math.max(6, Math.min(left, r.width - tw - 6));
+    let top = clientY - r.top - th - 12;
+    if (top < 4) top = clientY - r.top + 18; // 위 공간 부족하면 아래로
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  };
+  const at = (e) => {
+    const bar = e.target.closest && e.target.closest(".hBar");
+    if (bar) show(bar, e.clientX, e.clientY);
+    else hide();
+  };
+  svg.addEventListener("pointermove", at);
+  svg.addEventListener("pointerdown", at);
+  svg.addEventListener("pointerleave", hide);
 }
 
 function renderInsight() {
@@ -811,7 +859,7 @@ function renderInsight() {
 
 // 설정/내보내기 세그먼트 상태 반영(활성 탭·월 select 표시·캡션·엑셀 버튼 라벨)
 function syncExport() {
-  document.querySelectorAll(".segBtn").forEach(b => b.classList.toggle("active", b.dataset.period === exportPeriod));
+  document.querySelectorAll("#exportSeg .segBtn").forEach(b => b.classList.toggle("active", b.dataset.period === exportPeriod));
   const rm = document.getElementById("reportMonth");
   const hasMonths = rm && rm.dataset.has === "1";
   if (rm) rm.style.display = (exportPeriod === "monthly" && hasMonths) ? "" : "none";
@@ -836,6 +884,7 @@ function doExcel() {
 function renderAdmin(s) {
   adminStats = s;
   exportPeriod = "daily";
+  genPeriod = "daily";
   const el = document.getElementById("s-admin");
   const report = s.report || [];
   const nowMonth = kstYmd().slice(0, 7);
@@ -852,9 +901,12 @@ function renderAdmin(s) {
   adminInsightIdx = 0;
   const showMore = adminInsights.length > 1;
 
-  // 세그먼트 탭
+  // 세그먼트 탭 (내보내기용 data-period · 차트용 data-gperiod)
   const seg = [["daily", "일별"], ["weekly", "주별"], ["monthly", "월별"]].map(([id, t]) =>
     '<button class="segBtn' + (id === "daily" ? " active" : "") + '" data-period="' + id + '">' + t + '</button>'
+  ).join("");
+  const genSeg = [["daily", "일별"], ["weekly", "주별"], ["monthly", "월별"]].map(([id, t]) =>
+    '<button class="segBtn' + (id === "daily" ? " active" : "") + '" data-gperiod="' + id + '">' + t + '</button>'
   ).join("");
 
   // 업데이트 내역 아코디언(첫 항목 기본 펼침)
@@ -880,8 +932,10 @@ function renderAdmin(s) {
         kpiCard("오늘 그림 생성 수", k.todayGen, k.vsYesterdayGenPct, "어제 대비") +
       '</div>' +
 
-      '<div class="dashCard chartWrap"><div class="dashCardTitle">일별 그림 생성 수 (최근 기록일 · 한국시간)</div>' +
-        dailyChartSVG(s.daily) + '<div class="cTip" aria-hidden="true"></div></div>' +
+      '<div class="dashCard chartWrap"><div class="chartHead">' +
+        '<div class="dashCardTitle" id="genChartTitle"></div>' +
+        '<div class="segRow segSm" id="genChartSeg">' + genSeg + '</div></div>' +
+        '<div id="genChartBody"></div><div class="cTip" aria-hidden="true"></div></div>' +
 
       '<div class="dashCard chartWrap"><div class="dashCardTitle">시간대별 그림 생성 수 (한국시간)</div>' +
         hourlyChartSVG(s.hourly) + '<div class="cTip" aria-hidden="true"></div></div>' +
@@ -892,7 +946,7 @@ function renderAdmin(s) {
       '</div>' +
 
       '<div class="dashCard"><div class="dashCardTitle">설정 · 내보내기</div>' +
-        '<div class="segRow">' + seg + '</div>' +
+        '<div class="segRow" id="exportSeg">' + seg + '</div>' +
         '<div><select class="reportMonthSelect" id="reportMonth"></select></div>' +
         '<div class="exportCaption" id="exportCaption"></div>' +
         '<div class="exportBtns">' +
@@ -933,8 +987,10 @@ function renderAdmin(s) {
   renderInsight();
   const moreB = document.getElementById("insightMore");
   if (moreB) moreB.onclick = () => { adminInsightIdx++; renderInsight(); };
-  document.querySelectorAll(".segBtn").forEach(b =>
+  document.querySelectorAll("#exportSeg .segBtn").forEach(b =>
     b.onclick = () => { exportPeriod = b.dataset.period; syncExport(); });
+  document.querySelectorAll("#genChartSeg .segBtn").forEach(b =>
+    b.onclick = () => { genPeriod = b.dataset.gperiod; renderGenChart(); });
   const xb = document.getElementById("exportExcel"); if (xb) xb.onclick = doExcel;
   const pb = document.getElementById("exportPdf"); if (pb) pb.onclick = () => renderPrintReport();
   const rawB = document.getElementById("exportRaw"); if (rawB) rawB.onclick = exportRawData;
@@ -942,7 +998,8 @@ function renderAdmin(s) {
   el.querySelectorAll(".logHead").forEach(h =>
     h.onclick = () => h.parentElement.classList.toggle("open"));
 
-  wireBarCharts();
+  wireBarCharts();       // 시간대별 카드 배선 (생성 수 카드는 아직 비어 있어 no-op)
+  renderGenChart();      // 생성 수 차트 채우기 + 해당 카드 배선
   syncExport();
 }
 
