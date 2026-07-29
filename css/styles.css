@@ -241,9 +241,11 @@ h1.homeH1{font-size:50px;font-weight:800;margin:6px 0 6px;}
 .hChart .xLabel{fill:#94a3bb;font-size:13px;text-anchor:middle;font-family:inherit;}
 .hChart .hBar{cursor:pointer;transition:opacity .12s;}
 .hChart .hBar.active{opacity:.72;}
-/* 생성 수 차트 카드 헤더 — 제목 + 일별/주별/월별 세그먼트 탭 한 줄 배치(좁으면 줄바꿈) */
+/* 생성 수 차트 카드 헤더 — 제목 + (기간 select · 일별/주별/월별 세그먼트 탭) 한 줄 배치(좁으면 줄바꿈) */
 .chartHead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;margin-bottom:12px;}
 .chartHead .dashCardTitle{margin-bottom:0;}
+.chartCtrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.reportMonthSelect.selSm{font-size:13px;padding:8px 14px;margin-bottom:0;}
 .segRow.segSm{margin-bottom:0;padding:4px;}
 .segSm .segBtn{font-size:13px;padding:6px 16px;}
 /* 막대 차트 커스텀 툴팁(시간대별·일별 공통) — hover(데스크톱)·탭(터치) 모두 대응 */

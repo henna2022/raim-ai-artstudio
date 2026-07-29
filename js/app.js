@@ -1,8 +1,8 @@
-import { I18N } from "./i18n.js?v=37";
-import { downloadXlsx } from "./xlsx-mini.js?v=37";
-import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=37";
-import { buildKpis } from "./dashboard-data.js?v=37";
-import { qrSvg } from "./qr-mini.js?v=37";
+import { I18N } from "./i18n.js?v=38";
+import { downloadXlsx } from "./xlsx-mini.js?v=38";
+import { buildSnapshotSheets, buildMonthlyReportSheets, defaultReportMonth, buildExportSheets, buildPrintReportData, buildInsights } from "./report.js?v=38";
+import { buildKpis } from "./dashboard-data.js?v=38";
+import { qrSvg } from "./qr-mini.js?v=38";
 
 // ===================== 설정 =====================
 // 같은 도메인에 배포되면 그대로 두면 됩니다.
@@ -18,9 +18,12 @@ const RAIMI_IMG = "assets/raimi.png"; // 라이미 로봇 이미지 (이 위치�
 // (공용 기기이므로 localStorage가 아니라 sessionStorage — 탭을 닫으면 자동 만료.)
 const ADMIN_KEY_STORAGE = "raimi-admin-key";
 // 앱 버전(앱 정보 카드·업데이트 내역에 표시). 시맨틱 버전.
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.2.0";
 // 버전별 업데이트 내역 — 실제 진행한 작업만 기록(가짜 기능 금지). 최신이 위.
 const CHANGELOG = [
+  { version: "2.2.0", date: "2026-07", items: [
+    "일별 차트 기간 선택 추가(최근 기록일·최근 30일·월 전체) — 빈 날은 0으로 채워 달력대로 표시",
+  ] },
   { version: "2.1.0", date: "2026-07", items: [
     "그림 생성 수 차트에 일별·주별·월별 전환 탭 추가",
   ] },
@@ -678,6 +681,7 @@ async function loadAdminDashboard() {
 let adminStats = null;
 let exportPeriod = "daily";        // 설정/내보내기 세그먼트: daily | weekly | monthly
 let genPeriod = "daily";           // 생성 수 차트 세그먼트: daily | weekly | monthly (내보내기와 별개 상태)
+let genDailyRange = "recent";      // 일별 차트 기간: recent(최근 기록일) | recent30(최근 30일) | 'YYYY-MM'(해당 월 전체)
 let adminInsights = [];            // buildInsights 결과(규칙 기반 문자열들)
 let adminInsightIdx = 0;
 
@@ -784,24 +788,76 @@ function monthlyChartSVG(monthly) {
   });
 }
 
-// 생성 수 차트 기간별 구성 — 제목·캡션·SVG 빌더
-const GEN_CHART = {
-  daily: { title: "일별 그림 생성 수", cap: "최근 기록일 · 한국시간", svg: (s) => dailyChartSVG(s.daily) },
-  weekly: { title: "주별 그림 생성 수", cap: "최근 기록 주 · 월~일 · 한국시간", svg: (s) => weeklyChartSVG(s.weekly) },
-  monthly: { title: "월별 그림 생성 수", cap: "최근 12개월 · 한국시간", svg: (s) => monthlyChartSVG(s.monthly) },
-};
+// 'YYYY-MM-DD' → "MM/DD(요일)" (서버 _aggregate.js dayLabel과 동일 포맷 — 0건 날짜를 채울 때 클라이언트에서 생성)
+const WD_KO = ["일", "월", "화", "수", "목", "금", "토"];
+function dayLabelKo(ymd) {
+  const d = new Date(ymd + "T00:00:00Z");
+  return ymd.slice(5, 7) + "/" + ymd.slice(8, 10) + "(" + WD_KO[d.getUTCDay()] + ")";
+}
 
-// 생성 수 차트 카드(제목·활성 탭·SVG)를 genPeriod에 맞춰 다시 그린다.
+// 일별 기간 시리즈 — dailyFull(데이터 있는 날만 담김)을 달력일로 펼쳐 빈 날을 0으로 채운다.
+// range: "recent30"(오늘 포함 최근 30일) | 'YYYY-MM'(그 달 1일~말일, 진행 중인 달은 오늘까지)
+function dailyRangeSeries(s, range) {
+  const byDate = {};
+  for (const r of (Array.isArray(s.dailyFull) ? s.dailyFull : [])) byDate[r.date] = r.count;
+  const DAY = 86400000;
+  const today = kstYmd();
+  const ymdAt = (ymd, offset) => new Date(Date.parse(ymd + "T00:00:00Z") + offset * DAY).toISOString().slice(0, 10);
+  const days = [];
+  if (range === "recent30") {
+    for (let i = 29; i >= 0; i--) days.push(ymdAt(today, -i));
+  } else {
+    const [y, m] = range.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); // 그 달 말일
+    const end = range === today.slice(0, 7) ? Number(today.slice(8, 10)) : last; // 진행 중인 달은 오늘까지
+    for (let d = 1; d <= end; d++) days.push(range + "-" + String(d).padStart(2, "0"));
+  }
+  return days.map((d) => ({ label: dayLabelKo(d), count: byDate[d] || 0 }));
+}
+
+// 일별 기간 차트 — 막대가 많아지므로(최대 31개) x축 라벨은 ~10개 이하로 솎아낸다.
+function dailyRangeChartSVG(arr) {
+  const every = Math.max(1, Math.ceil(arr.length / 10));
+  return barChartSVG(arr, {
+    gradId: "dBarGrad",
+    ariaLabel: "일별 그림 생성 수",
+    xLabelFn: (i, d) => (i % every === 0 ? String(d.label).split("(")[0] : null),
+  });
+}
+
+// 생성 수 차트 카드(제목·활성 탭·기간 select·SVG)를 genPeriod/genDailyRange에 맞춰 다시 그린다.
 // innerHTML 교체로 이전 SVG의 리스너는 함께 버려지므로 해당 카드만 다시 배선한다.
 function renderGenChart() {
-  const cfg = GEN_CHART[genPeriod] || GEN_CHART.daily;
+  const s = adminStats;
+  let title, cap, svg;
+  if (genPeriod === "weekly") {
+    title = "주별 그림 생성 수"; cap = "최근 기록 주 · 월~일 · 한국시간";
+    svg = s && weeklyChartSVG(s.weekly);
+  } else if (genPeriod === "monthly") {
+    title = "월별 그림 생성 수"; cap = "최근 12개월 · 한국시간";
+    svg = s && monthlyChartSVG(s.monthly);
+  } else {
+    title = "일별 그림 생성 수";
+    if (genDailyRange === "recent") {
+      cap = "최근 기록일 · 한국시간";
+      svg = s && dailyChartSVG(s.daily);
+    } else {
+      cap = (genDailyRange === "recent30" ? "최근 30일" : genDailyRange.replace("-", ".")) + " · 한국시간";
+      svg = s && dailyRangeChartSVG(dailyRangeSeries(s, genDailyRange));
+    }
+  }
   const t = document.getElementById("genChartTitle");
-  if (t) t.textContent = cfg.title + " (" + cfg.cap + ")";
+  if (t) t.textContent = title + " (" + cap + ")";
   document.querySelectorAll("#genChartSeg .segBtn").forEach(b =>
     b.classList.toggle("active", b.dataset.gperiod === genPeriod));
+  const sel = document.getElementById("genDailyRange");
+  if (sel) {
+    sel.style.display = genPeriod === "daily" ? "" : "none"; // 기간 선택은 일별에서만 의미 있음
+    sel.value = genDailyRange;
+  }
   const body = document.getElementById("genChartBody");
-  if (!body || !adminStats) return;
-  body.innerHTML = cfg.svg(adminStats);
+  if (!body || !svg) return;
+  body.innerHTML = svg;
   const wrap = body.closest(".chartWrap");
   if (wrap) wireBarChart(wrap);
 }
@@ -885,6 +941,7 @@ function renderAdmin(s) {
   adminStats = s;
   exportPeriod = "daily";
   genPeriod = "daily";
+  genDailyRange = "recent";
   const el = document.getElementById("s-admin");
   const report = s.report || [];
   const nowMonth = kstYmd().slice(0, 7);
@@ -908,6 +965,10 @@ function renderAdmin(s) {
   const genSeg = [["daily", "일별"], ["weekly", "주별"], ["monthly", "월별"]].map(([id, t]) =>
     '<button class="segBtn' + (id === "daily" ? " active" : "") + '" data-gperiod="' + id + '">' + t + '</button>'
   ).join("");
+  // 일별 기간 select — 최근 기록일(기본)·최근 30일·월별 전체(report의 월 목록, 최신이 위)
+  const rangeOpts = '<option value="recent">최근 기록일</option><option value="recent30">최근 30일</option>' +
+    report.slice().reverse().map((m) =>
+      '<option value="' + escHtml(m.month) + '">' + escHtml(m.monthLabel) + ' 한 달</option>').join("");
 
   // 업데이트 내역 아코디언(첫 항목 기본 펼침)
   const changelog = CHANGELOG.map((c, i) =>
@@ -934,7 +995,9 @@ function renderAdmin(s) {
 
       '<div class="dashCard chartWrap"><div class="chartHead">' +
         '<div class="dashCardTitle" id="genChartTitle"></div>' +
-        '<div class="segRow segSm" id="genChartSeg">' + genSeg + '</div></div>' +
+        '<div class="chartCtrl">' +
+          '<select class="reportMonthSelect selSm" id="genDailyRange">' + rangeOpts + '</select>' +
+          '<div class="segRow segSm" id="genChartSeg">' + genSeg + '</div></div></div>' +
         '<div id="genChartBody"></div><div class="cTip" aria-hidden="true"></div></div>' +
 
       '<div class="dashCard chartWrap"><div class="dashCardTitle">시간대별 그림 생성 수 (한국시간)</div>' +
@@ -991,6 +1054,8 @@ function renderAdmin(s) {
     b.onclick = () => { exportPeriod = b.dataset.period; syncExport(); });
   document.querySelectorAll("#genChartSeg .segBtn").forEach(b =>
     b.onclick = () => { genPeriod = b.dataset.gperiod; renderGenChart(); });
+  const gdr = document.getElementById("genDailyRange");
+  if (gdr) gdr.onchange = () => { genDailyRange = gdr.value; renderGenChart(); };
   const xb = document.getElementById("exportExcel"); if (xb) xb.onclick = doExcel;
   const pb = document.getElementById("exportPdf"); if (pb) pb.onclick = () => renderPrintReport();
   const rawB = document.getElementById("exportRaw"); if (rawB) rawB.onclick = exportRawData;
