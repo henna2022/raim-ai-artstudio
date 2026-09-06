@@ -138,6 +138,7 @@ export default async function handler(req, res) {
 
     await logGeneration(mode); // 기존 generations insert(하위 호환 이중 기록)
     await logEvt('generate_ok', { mode, lang, session_id, detail: logoFailed ? 'logo_fail' : undefined });
+    await countExhibitUse(); // 전시물 집계 허브(다른 전시물과 합산해서 보기 위함)
     await cleanupOld(Date.now() - 5 * 60 * 60 * 1000);
     return res.status(200).json({ url });
   } catch (e) {
@@ -216,4 +217,26 @@ async function logEvt(type, { mode, lang, session_id, detail } = {}) {
       detail: detail ?? null,
     });
   } catch (e) { /* 로깅 실패가 생성 흐름을 막으면 안 됨 */ }
+}
+
+/* 전시물 이용 1회를 집계 허브로 보낸다 (https://github.com/henna2022/raim-exhibit-stats).
+   이 전시물은 "이용" 순간이 서버의 이미지 생성 성공이라, 브라우저 수집기 대신 여기서 직접 보낸다.
+   보내는 것은 "그림연구소를 한 번 썼다"는 표시뿐이고 프롬프트·이미지·session_id 는 나가지 않는다.
+   집계 실패가 그림 생성을 망치면 안 되므로 절대 예외를 밖으로 내보내지 않는다. */
+const STATS_HUB = process.env.STATS_HUB_URL || 'https://raim-exhibit-stats.vercel.app/api/collect';
+
+async function countExhibitUse() {
+  try {
+    // 허브가 느리거나 죽어 있어도 응답이 늦어지지 않도록 2초에서 끊는다.
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 2000);
+    await fetch(STATS_HUB, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exhibit: 'art', event: 'use' }),
+      signal: ac.signal,
+    }).finally(() => clearTimeout(t));
+  } catch (e) {
+    console.warn('전시물 집계 전송 실패(무시)', e?.message || e);
+  }
 }
