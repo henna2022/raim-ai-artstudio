@@ -1,3 +1,14 @@
+/* ko-linebreak:2026-10-08 한국어 줄바꿈 기본값. lang="ko" 인 글에만 적용 */
+[lang|="ko"] { word-break: keep-all; line-break: strict; overflow-wrap: break-word; }
+:where(h1, h2, h3, h4, caption, figcaption, th):where(:lang(ko)) { text-wrap-style: balance; }
+:where(p, li, dd, td, blockquote, .note):where(:lang(ko)) { text-wrap-style: pretty; }
+:where(code, .url):where(:lang(ko)) { overflow-wrap: anywhere; }
+:where(button, .btn, .badge, .chip):where(:lang(ko)) { white-space: nowrap; }
+:where(.user-text):where(:lang(ko)) { white-space: pre-line; }
+/* /ko-linebreak */
+/* 한국어 줄바꿈 예외: 카드 통째로 버튼(제목·설명 문장)은 줄바꿈 허용 */
+.bigCard { white-space: normal; }
+
 /* 페이퍼로지(Paperlogy) — 자체 호스팅(assets/fonts, OFL). 키오스크가 오프라인이어도 폰트가
    깨지지 않도록 CDN 대신 로컬 파일 + sw.js CORE 프리캐시를 쓴다. */
 @font-face{font-family:'Paperlogy';src:url('../assets/fonts/Paperlogy-4Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;}
